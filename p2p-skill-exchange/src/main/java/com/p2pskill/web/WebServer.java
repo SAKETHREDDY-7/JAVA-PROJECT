@@ -80,6 +80,9 @@ public class WebServer {
         File dir3 = new File("p2p-skill-exchange/src/main/resources/web");
         if (dir3.exists() && dir3.isDirectory()) return dir3.getAbsolutePath();
 
+        File dir4 = new File("p2p-skill-exchange/web");
+        if (dir4.exists() && dir4.isDirectory()) return dir4.getAbsolutePath();
+
         return "src/main/resources/web";
     }
 

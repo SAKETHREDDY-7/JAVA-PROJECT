@@ -145,6 +145,9 @@ public class DatabaseInitializer {
     private static void populateSampleData(Connection conn) {
         File sampleFile = new File("sql/sample_data.sql");
         if (!sampleFile.exists()) {
+            sampleFile = new File("p2p-skill-exchange/sql/sample_data.sql");
+        }
+        if (!sampleFile.exists()) {
             sampleFile = new File("../sql/sample_data.sql");
         }
 

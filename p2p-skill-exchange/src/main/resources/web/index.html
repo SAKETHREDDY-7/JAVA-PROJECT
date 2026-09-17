@@ -23,18 +23,15 @@
 
             <div class="nav-links" id="navLinks">
                 <a href="javascript:void(0)" class="nav-link" data-view="dashboard" onclick="app.showView('dashboard')">📊 Dashboard</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="peers" onclick="app.showView('peers')">🔍 Find Peers</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="skills" onclick="app.showView('skills')">⚡ My Skills</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="requests" onclick="app.showView('requests')">📬 Requests <span id="navReqBadge" class="nav-badge hidden">0</span></a>
-                <a href="javascript:void(0)" class="nav-link" data-view="matches" onclick="app.showView('matches')">🤝 My Matches</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="profile" onclick="app.showView('profile')">👤 Profile</a>
+                <a href="javascript:void(0)" class="nav-link" data-view="skills" onclick="app.showView('skills')">⚡ Manage Skills</a>
+                <a href="javascript:void(0)" class="nav-link" data-view="peers" onclick="app.showView('peers')">🔍 Browse Peers</a>
+                <a href="javascript:void(0)" class="nav-link" data-view="profile" onclick="app.showView('profile')">👤 My Profile</a>
                 <a href="javascript:void(0)" class="nav-link nav-logout" onclick="app.logout()">🚪 Sign Out</a>
             </div>
 
             <div class="nav-user" id="navUser">
                 <span class="user-avatar">👤</span>
                 <span id="navUserName">Student</span>
-                <span id="serverStatusBadge" class="badge-server-live" style="margin-left: 8px; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; cursor: default;">🟢 Live Server Mode</span>
             </div>
         </div>
     </nav>
@@ -45,12 +42,9 @@
         <!-- ════════════════════ VIEW: AUTH (LOGIN & REGISTER) ════════════════════ -->
         <section id="view-auth" class="view active">
             <div class="auth-hero">
-                <div class="auth-badge">🎓 College Peer-to-Peer Platform</div>
-                <h1>Skill Exchange System</h1>
-                <p>Connect with campus peers, trade skills, and learn together.</p>
-                <div style="margin-top: 8px;">
-                    <span id="authServerStatus" class="badge-server-live" style="display:inline-block; font-size: 0.78rem; padding: 3px 10px; border-radius: 12px;">🟢 Ready (VS Code Live Server Compatible)</span>
-                </div>
+                <div class="auth-badge">🎓 Student Skill & Record Portal</div>
+                <h1>Skill Sync</h1>
+                <p>A basic student management portal with secure login, interactive dashboard, and reliable data storage.</p>
             </div>
 
             <div class="auth-card">
@@ -64,7 +58,7 @@
                     <form onsubmit="app.handleLogin(event)">
                         <div class="form-group">
                             <label for="loginEmail">College Email Address</label>
-                            <input type="email" id="loginEmail" placeholder="e.g. saketh@college.edu" required>
+                            <input type="email" id="loginEmail" placeholder="e.g. saketh.reddy@college.edu" required>
                         </div>
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
@@ -73,15 +67,8 @@
                         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
                     </form>
 
-                    <!-- Quick Demo Logins for Fast Evaluation -->
-                    <div class="demo-logins">
-                        <p class="demo-title">⚡ Quick Demo Logins (1-Click Test):</p>
-                        <div class="demo-btn-group">
-                            <button class="btn btn-sm btn-outline" onclick="app.quickLogin('saketh.reddy@college.edu','Password@123')">👤 Saketh (CSE Yr 3)</button>
-                            <button class="btn btn-sm btn-outline" onclick="app.quickLogin('priya.sharma@college.edu','Password@123')">👤 Priya (IT Yr 3)</button>
-                            <button class="btn btn-sm btn-outline" onclick="app.quickLogin('arjun.mehta@college.edu','Password@123')">👤 Arjun (CSE Yr 2)</button>
-                            <button class="btn btn-sm btn-outline" onclick="app.quickLogin('divya.nair@college.edu','Password@123')">👤 Divya (ECE Yr 3)</button>
-                        </div>
+                    <div class="demo-helper mt-3">
+                        <small class="text-muted">⚡ Test Account: <code>saketh.reddy@college.edu</code> / <code>Password@123</code> <button type="button" class="btn-demo-fill" onclick="app.quickLogin('saketh.reddy@college.edu','Password@123')">Auto-Fill</button></small>
                     </div>
                 </div>
 
@@ -142,73 +129,163 @@
             <div class="page-header">
                 <div>
                     <h1 id="dashGreeting">Welcome back!</h1>
-                    <p class="subtitle">Here is your campus skill exchange summary.</p>
+                    <p class="subtitle" id="dashSubtitle">Student Dashboard & Stored Data Records</p>
                 </div>
-                <button class="btn btn-primary" onclick="app.showView('peers')">🔍 Find Peers</button>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="app.openAddDataModal()">➕ Store New Data</button>
+                    <button class="btn btn-secondary" onclick="app.showView('peers')">🔍 Browse Peers</button>
+                </div>
             </div>
 
             <!-- Stats Grid -->
             <div class="stats-grid">
-                <div class="stat-card" onclick="app.showView('skills')">
+                <div class="stat-card" onclick="app.filterStoredData('ALL')">
+                    <div class="stat-icon icon-records">📁</div>
+                    <div class="stat-value" id="statTotalRecords">0</div>
+                    <div class="stat-label">Total Stored Records</div>
+                </div>
+                <div class="stat-card" onclick="app.filterStoredData('OFFERED')">
                     <div class="stat-icon icon-offered">⚡</div>
                     <div class="stat-value" id="statOffered">0</div>
                     <div class="stat-label">Skills I Can Teach</div>
                 </div>
-                <div class="stat-card" onclick="app.showView('skills')">
+                <div class="stat-card" onclick="app.filterStoredData('WANTED')">
                     <div class="stat-icon icon-wanted">🎯</div>
                     <div class="stat-value" id="statWanted">0</div>
                     <div class="stat-label">Skills I Want to Learn</div>
                 </div>
-                <div class="stat-card" onclick="app.showView('matches')">
-                    <div class="stat-icon icon-matches">🤝</div>
-                    <div class="stat-value" id="statMatches">0</div>
-                    <div class="stat-label">Active Partnerships</div>
+            </div>
+
+            <!-- 📁 DATA STORAGE & MANAGEMENT HUB -->
+            <div class="data-storage-card" id="dataStorageSection">
+                <div class="data-storage-header">
+                    <div>
+                        <h2>📁 Stored Data & Records</h2>
+                        <p class="section-subtitle">Live records stored for your student profile</p>
+                    </div>
+                    <div class="data-storage-actions">
+                        <button class="btn btn-primary btn-sm" onclick="app.openAddDataModal()">➕ Store New Data</button>
+                        <button class="btn btn-outline btn-sm" onclick="app.exportStoredData()">📥 Export Data (JSON)</button>
+                    </div>
                 </div>
-                <div class="stat-card" onclick="app.showView('requests')">
-                    <div class="stat-icon icon-requests">📬</div>
-                    <div class="stat-value" id="statRequests">0</div>
-                    <div class="stat-label">Pending Proposals</div>
+
+                <!-- Search & Filters -->
+                <div class="table-toolbar">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="storageSearchInput" placeholder="Search stored data by title, category, or type..." oninput="app.filterStoredData()">
+                    </div>
+                    <div class="filter-group">
+                        <select id="storageTypeFilter" onchange="app.filterStoredData()">
+                            <option value="ALL">All Record Types</option>
+                            <option value="OFFERED">Can Teach (Offered)</option>
+                            <option value="WANTED">Want to Learn (Wanted)</option>
+                        </select>
+                        <select id="storageCategoryFilter" onchange="app.filterStoredData()">
+                            <option value="ALL">All Categories</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="stat-card" onclick="app.showView('profile')">
-                    <div class="stat-icon icon-rating">⭐</div>
-                    <div class="stat-value" id="statRating">0.0</div>
-                    <div class="stat-label">Average Peer Rating</div>
+
+                <!-- Stored Data Table -->
+                <div class="table-responsive">
+                    <table class="data-table" id="storedDataTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Skill / Data Item</th>
+                                <th>Category</th>
+                                <th>Record Type</th>
+                                <th>Proficiency Level</th>
+                                <th>Date Stored</th>
+                                <th style="text-align: center; width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="storedDataBody">
+                            <!-- Populated dynamically via app.js -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="storageEmptyState" class="empty-storage hidden">
+                    <div class="empty-icon">📂</div>
+                    <h3>No Stored Records Found</h3>
+                    <p>You haven't stored any records yet, or none match your search filter.</p>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="app.openAddDataModal()">➕ Store Your First Record</button>
                 </div>
             </div>
 
-            <!-- Dashboard Action Hub -->
-            <div class="dash-quick-links">
-                <h2>Quick Actions</h2>
+            <!-- Quick Shortcuts -->
+            <div class="dash-quick-links mt-4">
+                <h2>Quick Shortcuts</h2>
                 <div class="action-card-group">
+                    <div class="action-card" onclick="app.openAddDataModal()">
+                        <span class="action-icon">💾</span>
+                        <div>
+                            <h3>Store New Data</h3>
+                            <p>Save a new skill, subject, or academic topic into your record list.</p>
+                        </div>
+                    </div>
                     <div class="action-card" onclick="app.showView('peers')">
-                        <span class="action-icon">🎯</span>
+                        <span class="action-icon">👥</span>
                         <div>
-                            <h3>Smart Peer Matching</h3>
-                            <p>Discover students who need what you teach and can teach what you need.</p>
+                            <h3>Browse Campus Peers</h3>
+                            <p>Explore other students and discover what skills they have stored.</p>
                         </div>
                     </div>
-                    <div class="action-card" onclick="app.showView('skills')">
-                        <span class="action-icon">💡</span>
+                    <div class="action-card" onclick="app.showView('profile')">
+                        <span class="action-icon">👤</span>
                         <div>
-                            <h3>Update Your Skills</h3>
-                            <p>Add new programming languages, tools, or subjects to your profile.</p>
-                        </div>
-                    </div>
-                    <div class="action-card" onclick="app.showView('requests')">
-                        <span class="action-icon">📨</span>
-                        <div>
-                            <h3>Review Requests</h3>
-                            <p>Accept or decline skill exchange proposals sent by peers.</p>
+                            <h3>Manage Profile</h3>
+                            <p>Update your personal information, department, and bio.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Top Recommended Partners Preview -->
-            <div class="dash-section">
-                <h2>Top Compatible Matches</h2>
-                <div id="dashTopMatches" class="peer-grid">
-                    <p class="empty-state">Loading smart recommendations...</p>
+            <!-- 📋 REVIEW 1 STATUS & PROJECT ROADMAP -->
+            <div class="review-status-card mt-4">
+                <div class="review-status-header">
+                    <div>
+                        <div class="review-badge">📌 ACADEMIC PROJECT EVALUATION: REVIEW 1</div>
+                        <h2>Project Milestones & Implementation Progress</h2>
+                        <p class="section-subtitle">Phase 1 core modules developed from scratch using Core Java, HTTP REST API, and native Web standards.</p>
+                    </div>
+                    <span class="badge-phase">Review 1: Phase 1 Ready</span>
+                </div>
+                <div class="review-modules-grid">
+                    <div class="review-module-item completed">
+                        <div class="module-status-icon">✓</div>
+                        <div class="module-details">
+                            <h4>Module 1: Student Authentication</h4>
+                            <p>Custom login & registration with session persistence, role validation, and password verification.</p>
+                            <span class="module-tag tag-done">Completed (Phase 1)</span>
+                        </div>
+                    </div>
+                    <div class="review-module-item completed">
+                        <div class="module-status-icon">✓</div>
+                        <div class="module-details">
+                            <h4>Module 2: Dashboard & Profile</h4>
+                            <p>Real-time metrics, dynamic greeting, profile metadata, and quick navigation actions.</p>
+                            <span class="module-tag tag-done">Completed (Phase 1)</span>
+                        </div>
+                    </div>
+                    <div class="review-module-item completed">
+                        <div class="module-status-icon">✓</div>
+                        <div class="module-details">
+                            <h4>Module 3: Data Storage & Records (CRUD)</h4>
+                            <p>Persistent storage for skill records, real-time search, category filtering, and JSON export.</p>
+                            <span class="module-tag tag-done">Completed (Phase 1)</span>
+                        </div>
+                    </div>
+                    <div class="review-module-item planned">
+                        <div class="module-status-icon">⏳</div>
+                        <div class="module-details">
+                            <h4>Module 4: Automated Peer Matching</h4>
+                            <p>Bidirectional matching algorithm, exchange requests, and scheduling system.</p>
+                            <span class="module-tag tag-planned">Scheduled for Review 2 (Phase 2)</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -462,11 +539,72 @@
         </div>
     </div>
 
-    <!-- Firebase Cloud SDKs for Real-Time Firestore Synchronization -->
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <!-- ════════════════════ MODAL: STORE NEW DATA RECORD ════════════════════ -->
+    <div id="addDataModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Store New Data Record</h2>
+                <button class="modal-close" onclick="app.closeAddDataModal()">✕</button>
+            </div>
+            <form onsubmit="app.handleSaveDataRecord(event)">
+                <div class="form-group">
+                    <label for="newDataSkillSelect">Select Skill / Topic *</label>
+                    <select id="newDataSkillSelect" required onchange="app.handleSkillSelectChange(this.value)">
+                        <option value="">-- Choose from Catalogue or Custom --</option>
+                    </select>
+                </div>
 
-    <!-- JavaScript Application -->
+                <div class="form-group hidden" id="customSkillGroup">
+                    <label for="newDataCustomTitle">Custom Skill / Topic Title *</label>
+                    <input type="text" id="newDataCustomTitle" placeholder="e.g. Next.js, Rust, Docker, Figma...">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newDataCategory">Category *</label>
+                        <select id="newDataCategory" required>
+                            <option value="Programming Languages">Programming Languages</option>
+                            <option value="Web Development">Web Development</option>
+                            <option value="Mobile App Development">Mobile App Development</option>
+                            <option value="Data Science & AI">Data Science & AI</option>
+                            <option value="DevOps & Cloud">DevOps & Cloud</option>
+                            <option value="UI/UX & Design">UI/UX & Design</option>
+                            <option value="Core CS & Engineering">Core CS & Engineering</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newDataType">Record Type *</label>
+                        <select id="newDataType" required>
+                            <option value="OFFERED">⚡ Skill I Can Teach (Offered)</option>
+                            <option value="WANTED">🎯 Skill I Want to Learn (Wanted)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="newDataProficiency">Proficiency / Status</label>
+                    <select id="newDataProficiency">
+                        <option value="Beginner">Beginner (Foundational)</option>
+                        <option value="Intermediate" selected>Intermediate (Hands-on projects)</option>
+                        <option value="Advanced">Advanced (Experienced / Proficient)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="newDataNotes">Notes / Description (Optional)</label>
+                    <textarea id="newDataNotes" rows="2" placeholder="Brief notes about your knowledge or learning goals..."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeAddDataModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save to Storage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student Project Application Script -->
     <script src="js/app.js"></script>
 </body>
 </html>
