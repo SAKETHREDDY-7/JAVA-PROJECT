@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Portal - Login & Profile</title>
+    <title>Skill Sync - Student Skill Exchange</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
         <div class="nav-container">
             <div class="nav-brand">
                 <span class="logo-icon">🎓</span>
-                <span class="logo-text">Student<strong>Portal</strong></span>
+                <span class="logo-text">Skill<strong>Sync</strong></span>
             </div>
             
             <div class="nav-user">
@@ -33,9 +33,9 @@
         <!-- ════════════════════ VIEW 1: AUTH (LOGIN & REGISTER) ════════════════════ -->
         <section id="view-auth" class="view active">
             <div class="auth-hero">
-                <div class="auth-badge">🎓 College Academic Portal</div>
-                <h1>Student Portal</h1>
-                <p>Sign in with your college credentials or register to create your student profile.</p>
+                <div class="auth-badge">🎓 Skill Sync</div>
+                <h1>Skill Sync</h1>
+                <p>Connect with students, share your skills, and grow together.</p>
             </div>
 
             <div class="auth-card">
@@ -49,7 +49,7 @@
                     <form onsubmit="app.handleLogin(event)">
                         <div class="form-group">
                             <label for="loginEmail">College Email Address</label>
-                            <input type="email" id="loginEmail" placeholder="e.g. saketh.reddy@college.edu" required>
+                            <input type="email" id="loginEmail" placeholder="name@college.edu" required>
                         </div>
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
@@ -58,9 +58,6 @@
                         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
                     </form>
 
-                    <div class="demo-helper mt-3">
-                        <small class="text-muted">⚡ Test Account: <code>saketh.reddy@college.edu</code> / <code>Password@123</code> <button type="button" class="btn-demo-fill" onclick="app.quickLogin('saketh.reddy@college.edu','Password@123')">Auto-Fill</button></small>
-                    </div>
                 </div>
 
                 <!-- Register Form -->
@@ -121,8 +118,8 @@
             <div class="profile-header-card">
                 <div class="profile-avatar-large">👤</div>
                 <div class="profile-header-info">
-                    <h1 id="profFullName">Saketh Reddy</h1>
-                    <p class="profile-subtitle" id="profSubtitle">Computer Science & Engineering • 3rd Year</p>
+                    <h1 id="profFullName">Student</h1>
+                    <p class="profile-subtitle" id="profSubtitle">Student profile</p>
                     <span class="profile-badge-status" id="profStatusBadge">Active Student</span>
                 </div>
                 <div class="profile-header-actions">
@@ -141,11 +138,11 @@
                     <div class="card-body">
                         <div class="info-row">
                             <span class="info-label">Roll No / Student ID:</span>
-                            <span class="info-value" id="profStudentNumber">CS2024001</span>
+                            <span class="info-value" id="profStudentNumber">N/A</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Email Address:</span>
-                            <span class="info-value" id="profEmail">saketh.reddy@college.edu</span>
+                            <span class="info-value" id="profEmail">N/A</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Department:</span>
@@ -161,7 +158,7 @@
                         </div>
                         <div class="info-row vertical">
                             <span class="info-label">About / Bio:</span>
-                            <p class="info-bio" id="profBio">Full-stack student developer passionate about cloud databases and web applications.</p>
+                            <p class="info-bio" id="profBio">No bio provided yet.</p>
                         </div>
                     </div>
                 </div>

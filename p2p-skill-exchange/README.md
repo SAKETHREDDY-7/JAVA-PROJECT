@@ -122,17 +122,6 @@ A modern, cross-device **Peer-to-Peer Skill Exchange Web Application** developed
 
 ---
 
-## 🔑 Demo Login Credentials (1-Click Buttons in Web UI)
-
-Pre-loaded student accounts available for immediate evaluation:
-
-| Student Name | Email Address | Password | Major / Department |
-|:---|:---|:---|:---|
-| **Saketh Reddy** | `saketh.reddy@college.edu` | `Password@123` | Computer Science (Year 3) |
-| **Priya Sharma** | `priya.sharma@college.edu` | `Password@123` | Information Technology (Year 3) |
-| **Arjun Mehta** | `arjun.mehta@college.edu` | `Password@123` | Computer Science (Year 2) |
-| **Divya Nair** | `divya.nair@college.edu` | `Password@123` | Computer Science (Year 3) |
-
 ---
 
 ## 🧪 Automated Testing

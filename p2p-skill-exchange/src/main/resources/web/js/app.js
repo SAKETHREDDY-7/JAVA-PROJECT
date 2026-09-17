@@ -1,6 +1,6 @@
 /**
  * ════════════════════════════════════════════════════════════════
- * STUDENT PORTAL - APPLICATION LOGIC
+ * SKILL SYNC - APPLICATION LOGIC
  * Phase 1: Login, Registration, Student Profile & SQL Skills
  * ════════════════════════════════════════════════════════════════
  */
@@ -84,40 +84,13 @@ const app = {
                 }
             }
 
-            // Fallback for standalone frontend demonstration
-            if (email === "saketh.reddy@college.edu" && password === "Password@123") {
-                this.setCurrentUser({
-                    studentId: 1,
-                    studentNumber: "22CS0148",
-                    fullName: "Saketh Reddy",
-                    email: "saketh.reddy@college.edu",
-                    department: "Computer Science & Engineering",
-                    yearOfStudy: 3,
-                    bio: "Undergraduate student passionate about software engineering, Java, and database systems."
-                });
-                this.showToast("Signed in successfully (Offline Test Mode)!", "success");
-                return;
-            }
-
+            if (await this.loginFromLocalStorage(email, password)) return;
             const errorData = await response.json().catch(() => ({}));
             this.showToast(errorData.error || "Invalid email or password.", "error");
 
         } catch (err) {
-            // Standalone fallback when Java HTTP server is not running
-            if (email === "saketh.reddy@college.edu" && password === "Password@123") {
-                this.setCurrentUser({
-                    studentId: 1,
-                    studentNumber: "22CS0148",
-                    fullName: "Saketh Reddy",
-                    email: "saketh.reddy@college.edu",
-                    department: "Computer Science & Engineering",
-                    yearOfStudy: 3,
-                    bio: "Undergraduate student passionate about software engineering, Java, and database systems."
-                });
-                this.showToast("Signed in successfully!", "success");
-            } else {
-                this.showToast("Could not connect to backend server. Check server or test credentials.", "error");
-            }
+            if (await this.loginFromLocalStorage(email, password)) return;
+            this.showToast("Could not connect to backend server. Please try again.", "error");
         }
     },
 
@@ -160,38 +133,60 @@ const app = {
                 }
             }
 
-            // Standalone client fallback if backend not reached
-            const newStudent = {
-                studentId: Date.now(),
-                studentNumber,
-                fullName,
-                email,
-                department,
-                yearOfStudy,
-                bio: bio || "Student at College"
-            };
-            this.setCurrentUser(newStudent);
-            this.showToast("Account created successfully!", "success");
+            await this.registerInLocalStorage(studentNumber, fullName, email, password, department, yearOfStudy, bio);
 
         } catch (err) {
-            const newStudent = {
-                studentId: Date.now(),
-                studentNumber,
-                fullName,
-                email,
-                department,
-                yearOfStudy,
-                bio: bio || "Student at College"
-            };
-            this.setCurrentUser(newStudent);
-            this.showToast("Account created successfully!", "success");
+            try {
+                await this.registerInLocalStorage(studentNumber, fullName, email, password, department, yearOfStudy, bio);
+            } catch (storageError) {
+                this.showToast(storageError.message || "Could not save account.", "error");
+            }
         }
     },
 
-    quickLogin(email, password) {
-        document.getElementById("loginEmail").value = email;
-        document.getElementById("loginPassword").value = password;
-        this.switchAuthTab("login");
+    async hashPassword(password) {
+        if (!window.crypto || !window.crypto.subtle) {
+            throw new Error("Secure browser storage is unavailable. Please use the Skill Sync server.");
+        }
+        const bytes = new TextEncoder().encode(password);
+        const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+        return Array.from(new Uint8Array(digest))
+            .map(byte => byte.toString(16).padStart(2, "0"))
+            .join("");
+    },
+
+    async loginFromLocalStorage(email, password) {
+        const normalizedEmail = email.trim().toLowerCase();
+        const accounts = JSON.parse(localStorage.getItem("skill_sync_accounts") || "[]");
+        const account = accounts.find(item => item.email === normalizedEmail);
+        if (!account || account.passwordHash !== await this.hashPassword(password)) return false;
+
+        const { passwordHash, ...student } = account;
+        this.setCurrentUser(student);
+        this.showToast("Signed in successfully.", "success");
+        return true;
+    },
+
+    async registerInLocalStorage(studentNumber, fullName, email, password, department, yearOfStudy, bio) {
+        const normalizedEmail = email.trim().toLowerCase();
+        const accounts = JSON.parse(localStorage.getItem("skill_sync_accounts") || "[]");
+        if (accounts.some(item => item.email === normalizedEmail)) {
+            throw new Error("An account with this email already exists.");
+        }
+
+        const student = {
+            studentId: Date.now(),
+            studentNumber: studentNumber.trim().toUpperCase(),
+            fullName: fullName.trim(),
+            email: normalizedEmail,
+            department: department.trim(),
+            yearOfStudy,
+            bio: bio || "Student at College"
+        };
+        accounts.push({ ...student, passwordHash: await this.hashPassword(password) });
+        localStorage.setItem("skill_sync_accounts", JSON.stringify(accounts));
+        this.setCurrentUser(student);
+        this.showToast("Account created successfully.", "success");
     },
 
     setCurrentUser(student) {

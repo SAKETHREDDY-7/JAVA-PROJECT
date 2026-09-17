@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   STUDENT PORTAL - MODERN CLEAN STYLESHEET
+    SKILL SYNC - MODERN CLEAN STYLESHEET
    Phase 1 Student Project: Login, Register, Profile, & SQL Skills
    ════════════════════════════════════════════════════════════════ */
 
@@ -170,19 +170,6 @@ body {
     border-color: var(--danger);
 }
 
-.btn-demo-fill {
-    background: #e0e7ff;
-    color: #3730a3;
-    border: none;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-left: 6px;
-}
-.btn-demo-fill:hover { background: #c7d2fe; }
-
 .form-group {
     margin-bottom: 16px;
 }
@@ -280,29 +267,6 @@ body {
     color: var(--primary);
     border-bottom-color: var(--primary);
 }
-.demo-helper {
-    background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px;
-    text-align: center;
-    margin-top: 18px;
-}
-.demo-helper code {
-    background: #e2e8f0;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-size: 0.82rem;
-}
-
-/* ── VIEW 2: STUDENT PROFILE ─────────────────────────────────── */
-.profile-header-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px;
-    box-shadow: var(--shadow);
-    display: flex;
     align-items: center;
     gap: 24px;
     margin-bottom: 24px;
