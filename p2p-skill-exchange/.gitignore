@@ -1,0 +1,25 @@
+# ── Build output ────────────────────────────────────
+target/
+*.class
+*.jar
+
+# ── IDE files ────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# ── OS files ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Database credentials ──────────────────────────────
+# If you move credentials to a .properties file, ignore it here:
+# src/main/resources/db.properties
+
+# ── Maven wrapper ─────────────────────────────────────
+.mvn/
+mvnw
+mvnw.cmd
