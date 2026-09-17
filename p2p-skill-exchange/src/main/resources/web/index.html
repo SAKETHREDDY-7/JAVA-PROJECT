@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peer-to-Peer Skill Exchange System</title>
+    <title>Student Portal - Login & Profile</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,46 +14,37 @@
     <!-- Navigation Bar -->
     <nav id="navbar" class="navbar hidden">
         <div class="nav-container">
-            <div class="nav-brand" onclick="app.showView('dashboard')">
+            <div class="nav-brand">
                 <span class="logo-icon">🎓</span>
-                <span class="logo-text">Skill<strong>Exchange</strong></span>
+                <span class="logo-text">Student<strong>Portal</strong></span>
             </div>
             
-            <button class="nav-toggle" id="navToggle" onclick="app.toggleMobileNav()">☰</button>
-
-            <div class="nav-links" id="navLinks">
-                <a href="javascript:void(0)" class="nav-link" data-view="dashboard" onclick="app.showView('dashboard')">📊 Dashboard</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="skills" onclick="app.showView('skills')">⚡ Manage Skills</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="peers" onclick="app.showView('peers')">🔍 Browse Peers</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="profile" onclick="app.showView('profile')">👤 My Profile</a>
-                <a href="javascript:void(0)" class="nav-link nav-logout" onclick="app.logout()">🚪 Sign Out</a>
-            </div>
-
-            <div class="nav-user" id="navUser">
-                <span class="user-avatar">👤</span>
-                <span id="navUserName">Student</span>
+            <div class="nav-user">
+                <span class="user-avatar-small">👤</span>
+                <span id="navUserName" class="nav-user-name">Student</span>
+                <button class="btn btn-sm btn-outline-danger" onclick="app.logout()">🚪 Sign Out</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Container -->
+    <!-- Main Container -->
     <main class="main-container">
 
-        <!-- ════════════════════ VIEW: AUTH (LOGIN & REGISTER) ════════════════════ -->
+        <!-- ════════════════════ VIEW 1: AUTH (LOGIN & REGISTER) ════════════════════ -->
         <section id="view-auth" class="view active">
             <div class="auth-hero">
-                <div class="auth-badge">🎓 Student Skill & Record Portal</div>
-                <h1>Skill Sync</h1>
-                <p>A basic student management portal with secure login, interactive dashboard, and reliable data storage.</p>
+                <div class="auth-badge">🎓 College Academic Portal</div>
+                <h1>Student Portal</h1>
+                <p>Sign in with your college credentials or register to create your student profile.</p>
             </div>
 
             <div class="auth-card">
                 <div class="auth-tabs">
                     <button id="tabLoginBtn" class="auth-tab active" onclick="app.switchAuthTab('login')">Sign In</button>
-                    <button id="tabRegisterBtn" class="auth-tab" onclick="app.switchAuthTab('register')">Register New Account</button>
+                    <button id="tabRegisterBtn" class="auth-tab" onclick="app.switchAuthTab('register')">Register New Student</button>
                 </div>
 
-                <!-- Login Form -->
+                <!-- Sign In Form -->
                 <div id="authLoginBox" class="auth-form-box">
                     <form onsubmit="app.handleLogin(event)">
                         <div class="form-group">
@@ -77,534 +68,187 @@
                     <form onsubmit="app.handleRegister(event)">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="regStudentNumber">Student ID / Roll No.</label>
-                                <input type="text" id="regStudentNumber" placeholder="e.g. CS2024015" required>
+                                <label for="regStudentNumber">Roll No. / Student ID *</label>
+                                <input type="text" id="regStudentNumber" placeholder="e.g. 22CS0148" required>
                             </div>
                             <div class="form-group">
-                                <label for="regFullName">Full Name</label>
-                                <input type="text" id="regFullName" placeholder="e.g. Rahul Sharma" required>
+                                <label for="regFullName">Full Name *</label>
+                                <input type="text" id="regFullName" placeholder="e.g. Saketh Reddy" required>
                             </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="regEmail">College Email</label>
+                            <label for="regEmail">College Email Address *</label>
                             <input type="email" id="regEmail" placeholder="name@college.edu" required>
                         </div>
+
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="regPassword">Password</label>
-                                <input type="password" id="regPassword" placeholder="At least 6 characters" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="regConfirmPassword">Confirm Password</label>
-                                <input type="password" id="regConfirmPassword" placeholder="Re-enter password" required>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="regDepartment">Department / Major</label>
+                                <label for="regDepartment">Department / Major *</label>
                                 <input type="text" id="regDepartment" placeholder="e.g. Computer Science" required>
                             </div>
                             <div class="form-group">
-                                <label for="regYear">Year of Study</label>
+                                <label for="regYear">Year of Study *</label>
                                 <select id="regYear" required>
                                     <option value="1">1st Year</option>
-                                    <option value="2" selected>2nd Year</option>
-                                    <option value="3">3rd Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3" selected>3rd Year</option>
                                     <option value="4">4th Year</option>
                                 </select>
                             </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="regBio">Short Bio (Optional)</label>
-                            <textarea id="regBio" rows="2" placeholder="Tell peers what you love to learn or build..."></textarea>
+                            <label for="regPassword">Password *</label>
+                            <input type="password" id="regPassword" placeholder="At least 6 characters" required>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+
+                        <div class="form-group">
+                            <label for="regBio">Bio / Interests (Optional)</label>
+                            <textarea id="regBio" rows="2" placeholder="Brief intro about your technical interests..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block">Create Account & Profile</button>
                     </form>
                 </div>
             </div>
         </section>
 
-        <!-- ════════════════════ VIEW: DASHBOARD ════════════════════ -->
-        <section id="view-dashboard" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1 id="dashGreeting">Welcome back!</h1>
-                    <p class="subtitle" id="dashSubtitle">Student Dashboard & Stored Data Records</p>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="app.openAddDataModal()">➕ Store New Data</button>
-                    <button class="btn btn-secondary" onclick="app.showView('peers')">🔍 Browse Peers</button>
-                </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card" onclick="app.filterStoredData('ALL')">
-                    <div class="stat-icon icon-records">📁</div>
-                    <div class="stat-value" id="statTotalRecords">0</div>
-                    <div class="stat-label">Total Stored Records</div>
-                </div>
-                <div class="stat-card" onclick="app.filterStoredData('OFFERED')">
-                    <div class="stat-icon icon-offered">⚡</div>
-                    <div class="stat-value" id="statOffered">0</div>
-                    <div class="stat-label">Skills I Can Teach</div>
-                </div>
-                <div class="stat-card" onclick="app.filterStoredData('WANTED')">
-                    <div class="stat-icon icon-wanted">🎯</div>
-                    <div class="stat-value" id="statWanted">0</div>
-                    <div class="stat-label">Skills I Want to Learn</div>
-                </div>
-            </div>
-
-            <!-- 📁 DATA STORAGE & MANAGEMENT HUB -->
-            <div class="data-storage-card" id="dataStorageSection">
-                <div class="data-storage-header">
-                    <div>
-                        <h2>📁 Stored Data & Records</h2>
-                        <p class="section-subtitle">Live records stored for your student profile</p>
-                    </div>
-                    <div class="data-storage-actions">
-                        <button class="btn btn-primary btn-sm" onclick="app.openAddDataModal()">➕ Store New Data</button>
-                        <button class="btn btn-outline btn-sm" onclick="app.exportStoredData()">📥 Export Data (JSON)</button>
-                    </div>
-                </div>
-
-                <!-- Search & Filters -->
-                <div class="table-toolbar">
-                    <div class="search-input-wrapper">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="storageSearchInput" placeholder="Search stored data by title, category, or type..." oninput="app.filterStoredData()">
-                    </div>
-                    <div class="filter-group">
-                        <select id="storageTypeFilter" onchange="app.filterStoredData()">
-                            <option value="ALL">All Record Types</option>
-                            <option value="OFFERED">Can Teach (Offered)</option>
-                            <option value="WANTED">Want to Learn (Wanted)</option>
-                        </select>
-                        <select id="storageCategoryFilter" onchange="app.filterStoredData()">
-                            <option value="ALL">All Categories</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Stored Data Table -->
-                <div class="table-responsive">
-                    <table class="data-table" id="storedDataTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">#</th>
-                                <th>Skill / Data Item</th>
-                                <th>Category</th>
-                                <th>Record Type</th>
-                                <th>Proficiency Level</th>
-                                <th>Date Stored</th>
-                                <th style="text-align: center; width: 100px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="storedDataBody">
-                            <!-- Populated dynamically via app.js -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="storageEmptyState" class="empty-storage hidden">
-                    <div class="empty-icon">📂</div>
-                    <h3>No Stored Records Found</h3>
-                    <p>You haven't stored any records yet, or none match your search filter.</p>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="app.openAddDataModal()">➕ Store Your First Record</button>
-                </div>
-            </div>
-
-            <!-- Quick Shortcuts -->
-            <div class="dash-quick-links mt-4">
-                <h2>Quick Shortcuts</h2>
-                <div class="action-card-group">
-                    <div class="action-card" onclick="app.openAddDataModal()">
-                        <span class="action-icon">💾</span>
-                        <div>
-                            <h3>Store New Data</h3>
-                            <p>Save a new skill, subject, or academic topic into your record list.</p>
-                        </div>
-                    </div>
-                    <div class="action-card" onclick="app.showView('peers')">
-                        <span class="action-icon">👥</span>
-                        <div>
-                            <h3>Browse Campus Peers</h3>
-                            <p>Explore other students and discover what skills they have stored.</p>
-                        </div>
-                    </div>
-                    <div class="action-card" onclick="app.showView('profile')">
-                        <span class="action-icon">👤</span>
-                        <div>
-                            <h3>Manage Profile</h3>
-                            <p>Update your personal information, department, and bio.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 📋 REVIEW 1 STATUS & PROJECT ROADMAP -->
-            <div class="review-status-card mt-4">
-                <div class="review-status-header">
-                    <div>
-                        <div class="review-badge">📌 ACADEMIC PROJECT EVALUATION: REVIEW 1</div>
-                        <h2>Project Milestones & Implementation Progress</h2>
-                        <p class="section-subtitle">Phase 1 core modules developed from scratch using Core Java, HTTP REST API, and native Web standards.</p>
-                    </div>
-                    <span class="badge-phase">Review 1: Phase 1 Ready</span>
-                </div>
-                <div class="review-modules-grid">
-                    <div class="review-module-item completed">
-                        <div class="module-status-icon">✓</div>
-                        <div class="module-details">
-                            <h4>Module 1: Student Authentication</h4>
-                            <p>Custom login & registration with session persistence, role validation, and password verification.</p>
-                            <span class="module-tag tag-done">Completed (Phase 1)</span>
-                        </div>
-                    </div>
-                    <div class="review-module-item completed">
-                        <div class="module-status-icon">✓</div>
-                        <div class="module-details">
-                            <h4>Module 2: Dashboard & Profile</h4>
-                            <p>Real-time metrics, dynamic greeting, profile metadata, and quick navigation actions.</p>
-                            <span class="module-tag tag-done">Completed (Phase 1)</span>
-                        </div>
-                    </div>
-                    <div class="review-module-item completed">
-                        <div class="module-status-icon">✓</div>
-                        <div class="module-details">
-                            <h4>Module 3: Data Storage & Records (CRUD)</h4>
-                            <p>Persistent storage for skill records, real-time search, category filtering, and JSON export.</p>
-                            <span class="module-tag tag-done">Completed (Phase 1)</span>
-                        </div>
-                    </div>
-                    <div class="review-module-item planned">
-                        <div class="module-status-icon">⏳</div>
-                        <div class="module-details">
-                            <h4>Module 4: Automated Peer Matching</h4>
-                            <p>Bidirectional matching algorithm, exchange requests, and scheduling system.</p>
-                            <span class="module-tag tag-planned">Scheduled for Review 2 (Phase 2)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: FIND PEERS ════════════════════ -->
-        <section id="view-peers" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1>Find Compatible Peers</h1>
-                    <p class="subtitle">Matched via Bidirectional Skill Overlap Algorithm.</p>
-                </div>
-            </div>
-
-            <div class="search-bar-card">
-                <input type="text" id="peerSearchInput" placeholder="Search by student name, department, or skill (e.g., Python, Java, SQL)..." oninput="app.filterPeers()">
-                <button class="btn btn-secondary" onclick="app.loadPeers()">🔄 Refresh</button>
-            </div>
-
-            <div id="peersList" class="peer-grid">
-                <p class="empty-state">Loading peers...</p>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: PEER PROFILE ════════════════════ -->
-        <section id="view-peer-profile" class="view hidden">
-            <button class="btn btn-sm btn-outline mb-4" onclick="app.showView('peers')">← Back to Peers</button>
-
-            <div class="profile-card">
-                <div class="profile-header">
-                    <div class="profile-avatar">👤</div>
-                    <div class="profile-info">
-                        <h1 id="peerDetailName">Peer Name</h1>
-                        <p id="peerDetailMeta" class="profile-meta">Department • Year</p>
-                        <div id="peerDetailScoreBadge" class="badge badge-high mt-2">100% Match</div>
-                        <div id="peerDetailRating" class="profile-rating mt-2">⭐ 5.0 (0 reviews)</div>
-                    </div>
-                </div>
-
-                <div class="profile-bio-box">
-                    <h3>About</h3>
-                    <p id="peerDetailBio">Bio description here...</p>
-                </div>
-
-                <div class="skills-preview-grid">
-                    <div>
-                        <h3>Skills They Can Teach</h3>
-                        <div id="peerDetailOffered" class="skill-tag-group"></div>
-                    </div>
-                    <div>
-                        <h3>Skills They Want to Learn</h3>
-                        <div id="peerDetailWanted" class="skill-tag-group"></div>
-                    </div>
-                </div>
-
-                <!-- Exchange Proposal Form -->
-                <div class="proposal-box">
-                    <h3>Send Skill Exchange Proposal</h3>
-                    <div id="proposalFormBox">
-                        <textarea id="proposalMessage" rows="3" placeholder="Hi! I saw you know Java and want to learn Python. Let's exchange skills!"></textarea>
-                        <button id="sendProposalBtn" class="btn btn-primary mt-2" onclick="app.sendProposal()">Send Exchange Request</button>
-                    </div>
-                    <div id="proposalNotice" class="alert alert-info hidden">An active exchange proposal already exists with this student.</div>
-                </div>
-
-                <!-- Peer Reviews -->
-                <div class="reviews-box">
-                    <h3>Past Peer Reviews</h3>
-                    <div id="peerReviewsList" class="reviews-list">
-                        <p class="empty-state">No reviews recorded yet for this peer.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: MY SKILLS ════════════════════ -->
-        <section id="view-skills" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1>Manage My Skills</h1>
-                    <p class="subtitle">Specify what you can teach and what you want to learn.</p>
-                </div>
-            </div>
-
-            <div class="skills-manager-grid">
-                <!-- Offered Skills Column -->
-                <div class="card skill-column">
-                    <div class="card-header">
-                        <h2>⚡ Skills I Can Teach (Offered)</h2>
-                        <span id="offeredBadgeCount" class="badge badge-primary">0 Skills</span>
-                    </div>
-                    <div class="add-skill-form">
-                        <select id="catalogueOfferedSelect">
-                            <option value="">-- Choose skill to teach --</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="app.addSkill('OFFERED')">+ Add</button>
-                    </div>
-                    <div id="myOfferedSkillsList" class="skill-pill-list">
-                        <p class="empty-state">No offered skills added yet.</p>
-                    </div>
-                </div>
-
-                <!-- Wanted Skills Column -->
-                <div class="card skill-column">
-                    <div class="card-header">
-                        <h2>🎯 Skills I Want to Learn (Wanted)</h2>
-                        <span id="wantedBadgeCount" class="badge badge-accent">0 Skills</span>
-                    </div>
-                    <div class="add-skill-form">
-                        <select id="catalogueWantedSelect">
-                            <option value="">-- Choose skill to learn --</option>
-                        </select>
-                        <button class="btn btn-accent" onclick="app.addSkill('WANTED')">+ Add</button>
-                    </div>
-                    <div id="myWantedSkillsList" class="skill-pill-list">
-                        <p class="empty-state">No wanted skills added yet.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: REQUESTS ════════════════════ -->
-        <section id="view-requests" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1>Exchange Proposals</h1>
-                    <p class="subtitle">Manage inbound proposals and track outgoing invitations.</p>
-                </div>
-            </div>
-
-            <div class="request-tabs">
-                <button id="tabIncomingBtn" class="tab-btn active" onclick="app.switchRequestTab('incoming')">📥 Incoming Requests</button>
-                <button id="tabOutgoingBtn" class="tab-btn" onclick="app.switchRequestTab('outgoing')">📤 Sent Requests</button>
-            </div>
-
-            <div id="incomingRequestsBox">
-                <div id="incomingList" class="request-list">
-                    <p class="empty-state">No incoming exchange requests.</p>
-                </div>
-            </div>
-
-            <div id="outgoingRequestsBox" class="hidden">
-                <div id="outgoingList" class="request-list">
-                    <p class="empty-state">No sent requests.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: MY MATCHES ════════════════════ -->
-        <section id="view-matches" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1>My Study Partnerships</h1>
-                    <p class="subtitle">Active skill-exchange collaborations confirmed between you and peers.</p>
-                </div>
-            </div>
-
-            <div id="matchesList" class="matches-grid">
-                <p class="empty-state">No active matches found. Accept an incoming request or find peers to get started!</p>
-            </div>
-        </section>
-
-        <!-- ════════════════════ VIEW: PROFILE ════════════════════ -->
+        <!-- ════════════════════ VIEW 2: STUDENT PROFILE ════════════════════ -->
         <section id="view-profile" class="view hidden">
-            <div class="page-header">
-                <div>
-                    <h1>Student Profile</h1>
-                    <p class="subtitle">View and update your academic information.</p>
+            
+            <!-- Student Header Banner -->
+            <div class="profile-header-card">
+                <div class="profile-avatar-large">👤</div>
+                <div class="profile-header-info">
+                    <h1 id="profFullName">Saketh Reddy</h1>
+                    <p class="profile-subtitle" id="profSubtitle">Computer Science & Engineering • 3rd Year</p>
+                    <span class="profile-badge-status" id="profStatusBadge">Active Student</span>
+                </div>
+                <div class="profile-header-actions">
+                    <button class="btn btn-outline" onclick="app.openEditProfileModal()">✏️ Edit Profile</button>
+                    <button class="btn btn-outline-danger" onclick="app.logout()">🚪 Sign Out</button>
                 </div>
             </div>
 
-            <div class="profile-edit-grid">
-                <div class="card">
-                    <h2>Edit Profile Details</h2>
-                    <form onsubmit="app.handleSaveProfile(event)" class="mt-4">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Student Number / ID</label>
-                                <input type="text" id="profStudentNumber" disabled>
-                            </div>
-                            <div class="form-group">
-                                <label>Email Address</label>
-                                <input type="email" id="profEmail" disabled>
-                            </div>
+            <div class="profile-grid">
+                
+                <!-- Card 1: Student Information -->
+                <div class="profile-card">
+                    <div class="card-header">
+                        <h2>📋 Student Information</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="info-label">Roll No / Student ID:</span>
+                            <span class="info-value" id="profStudentNumber">CS2024001</span>
                         </div>
-                        <div class="form-group">
-                            <label for="profFullName">Full Name</label>
-                            <input type="text" id="profFullName" required>
+                        <div class="info-row">
+                            <span class="info-label">Email Address:</span>
+                            <span class="info-value" id="profEmail">saketh.reddy@college.edu</span>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="profDepartment">Department</label>
-                                <input type="text" id="profDepartment" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="profYear">Year of Study</label>
-                                <select id="profYear" required>
-                                    <option value="1">Year 1</option>
-                                    <option value="2">Year 2</option>
-                                    <option value="3">Year 3</option>
-                                    <option value="4">Year 4</option>
-                                </select>
-                            </div>
+                        <div class="info-row">
+                            <span class="info-label">Department:</span>
+                            <span class="info-value" id="profDepartment">Computer Science</span>
                         </div>
-                        <div class="form-group">
-                            <label for="profBio">Bio & Learning Goals</label>
-                            <textarea id="profBio" rows="3"></textarea>
+                        <div class="info-row">
+                            <span class="info-label">Academic Year:</span>
+                            <span class="info-value" id="profYear">3rd Year</span>
                         </div>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </form>
-                </div>
-
-                <div class="card">
-                    <h2>Feedback Received From Peers</h2>
-                    <div id="myReceivedReviewsList" class="reviews-list mt-4">
-                        <p class="empty-state">No reviews received yet. Complete study sessions to earn ratings!</p>
+                        <div class="info-row">
+                            <span class="info-label">Account Created:</span>
+                            <span class="info-value" id="profCreatedAt">Database Record</span>
+                        </div>
+                        <div class="info-row vertical">
+                            <span class="info-label">About / Bio:</span>
+                            <p class="info-bio" id="profBio">Full-stack student developer passionate about cloud databases and web applications.</p>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Card 2: Skills Known (Selected & Stored by SQL) -->
+                <div class="profile-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>⚡ Technical Skills Known</h2>
+                            <p class="section-subtitle">Skills loaded and saved directly to the SQL database</p>
+                        </div>
+                        <span class="skills-count-badge" id="skillsCountBadge">0 Skills</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <!-- Add Skill Selector (Powered by SQL) -->
+                        <div class="skill-select-box">
+                            <label for="sqlSkillSelect"><strong>Select Skill from SQL Database:</strong></label>
+                            <div class="skill-input-group">
+                                <select id="sqlSkillSelect" class="form-select">
+                                    <option value="" disabled selected>Loading skills from SQL database...</option>
+                                </select>
+                                <button type="button" class="btn btn-primary" onclick="app.addKnownSkill()">➕ Add Skill</button>
+                            </div>
+                            <small class="text-muted">Populated from <code>skill</code> SQL table (Programming, Web, AI, Databases, etc.)</small>
+                        </div>
+
+                        <!-- Current Known Skills List -->
+                        <div class="known-skills-container">
+                            <label><strong>Current Skills Linked to Student:</strong></label>
+                            <div id="knownSkillsList" class="skills-chip-group">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="noSkillsMessage" class="empty-skills-notice hidden">
+                                <span>💡 No skills linked yet. Select a skill from the SQL dropdown above to add it.</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
+
         </section>
 
     </main>
 
-    <!-- ════════════════════ MODAL: LEAVE FEEDBACK ════════════════════ -->
-    <div id="feedbackModal" class="modal hidden">
-        <div class="modal-content">
+    <!-- ════════════════════ MODAL: EDIT PROFILE ════════════════════ -->
+    <div id="editProfileModal" class="modal-overlay hidden">
+        <div class="modal-card">
             <div class="modal-header">
-                <h2>Leave Peer Feedback & Rating</h2>
-                <button class="modal-close" onclick="app.closeFeedbackModal()">✕</button>
+                <h3>✏️ Edit Student Profile</h3>
+                <button class="modal-close" onclick="app.closeEditProfileModal()">✕</button>
             </div>
-            <form onsubmit="app.submitFeedback(event)">
-                <input type="hidden" id="modalMatchId">
+            <form onsubmit="app.handleSaveProfile(event)">
                 <div class="form-group">
-                    <label>Rating (1 to 5 Stars)</label>
-                    <select id="modalRating" required>
-                        <option value="5">★★★★★ (5 Stars - Excellent Collaboration)</option>
-                        <option value="4">★★★★☆ (4 Stars - Very Good)</option>
-                        <option value="3">★★★☆☆ (3 Stars - Satisfactory)</option>
-                        <option value="2">★★☆☆☆ (2 Stars - Needs Improvement)</option>
-                        <option value="1">★☆☆☆☆ (1 Star - Poor Collaboration)</option>
-                    </select>
+                    <label for="editFullName">Full Name *</label>
+                    <input type="text" id="editFullName" required>
                 </div>
-                <div class="form-group">
-                    <label for="modalComment">Comments & Experience</label>
-                    <textarea id="modalComment" rows="3" placeholder="Share how helpful this student was during your skill exchange..."></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="app.closeFeedbackModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit Review</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ════════════════════ MODAL: STORE NEW DATA RECORD ════════════════════ -->
-    <div id="addDataModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>➕ Store New Data Record</h2>
-                <button class="modal-close" onclick="app.closeAddDataModal()">✕</button>
-            </div>
-            <form onsubmit="app.handleSaveDataRecord(event)">
-                <div class="form-group">
-                    <label for="newDataSkillSelect">Select Skill / Topic *</label>
-                    <select id="newDataSkillSelect" required onchange="app.handleSkillSelectChange(this.value)">
-                        <option value="">-- Choose from Catalogue or Custom --</option>
-                    </select>
-                </div>
-
-                <div class="form-group hidden" id="customSkillGroup">
-                    <label for="newDataCustomTitle">Custom Skill / Topic Title *</label>
-                    <input type="text" id="newDataCustomTitle" placeholder="e.g. Next.js, Rust, Docker, Figma...">
-                </div>
-
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="newDataCategory">Category *</label>
-                        <select id="newDataCategory" required>
-                            <option value="Programming Languages">Programming Languages</option>
-                            <option value="Web Development">Web Development</option>
-                            <option value="Mobile App Development">Mobile App Development</option>
-                            <option value="Data Science & AI">Data Science & AI</option>
-                            <option value="DevOps & Cloud">DevOps & Cloud</option>
-                            <option value="UI/UX & Design">UI/UX & Design</option>
-                            <option value="Core CS & Engineering">Core CS & Engineering</option>
-                        </select>
+                        <label for="editDepartment">Department *</label>
+                        <input type="text" id="editDepartment" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="newDataType">Record Type *</label>
-                        <select id="newDataType" required>
-                            <option value="OFFERED">⚡ Skill I Can Teach (Offered)</option>
-                            <option value="WANTED">🎯 Skill I Want to Learn (Wanted)</option>
+                        <label for="editYear">Year of Study *</label>
+                        <select id="editYear" required>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label for="newDataProficiency">Proficiency / Status</label>
-                    <select id="newDataProficiency">
-                        <option value="Beginner">Beginner (Foundational)</option>
-                        <option value="Intermediate" selected>Intermediate (Hands-on projects)</option>
-                        <option value="Advanced">Advanced (Experienced / Proficient)</option>
-                    </select>
+                    <label for="editBio">Bio / About Me</label>
+                    <textarea id="editBio" rows="3"></textarea>
                 </div>
-
-                <div class="form-group">
-                    <label for="newDataNotes">Notes / Description (Optional)</label>
-                    <textarea id="newDataNotes" rows="2" placeholder="Brief notes about your knowledge or learning goals..."></textarea>
-                </div>
-
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="app.closeAddDataModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">💾 Save to Storage</button>
+                    <button type="button" class="btn btn-secondary" onclick="app.closeEditProfileModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Student Project Application Script -->
+    <!-- Application Script -->
     <script src="js/app.js"></script>
 </body>
 </html>
