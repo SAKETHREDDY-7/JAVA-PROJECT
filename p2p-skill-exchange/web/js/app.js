@@ -33,42 +33,11 @@ const app = {
     },
 
     setupLoggedInUI() {
-        document.getElementById('navbar').classList.remove('hidden');
-        document.getElementById('navUserName').textContent = this.currentUser.fullName || 'Student';
-        this.initRealtimeSync();
+        const nav = document.getElementById('navbar');
+        if (nav) nav.classList.remove('hidden');
+        const navName = document.getElementById('navUserName');
+        if (navName) navName.textContent = this.currentUser.fullName || 'Student';
     },
-
-    unsubscribeRealtime: null,
-
-    initRealtimeSync() {
-        if (this.unsubscribeRealtime) {
-            this.unsubscribeRealtime();
-            this.unsubscribeRealtime = null;
-        }
-        if (typeof FirestoreBackend !== 'undefined' && FirestoreBackend.isAvailable() && this.currentUser) {
-            FirestoreBackend.init().then(() => {
-                if (FirestoreBackend.db) {
-                    const sid = Number(this.currentUser.studentId || this.currentUser.id);
-                    this.unsubscribeRealtime = FirestoreBackend.db.collection('requests')
-                        .where('toId', '==', sid)
-                        .where('status', '==', 'PENDING')
-                        .onSnapshot(snap => {
-                            const badge = document.getElementById('navReqBadge');
-                            if (badge) {
-                                badge.textContent = snap.size;
-                                badge.classList.toggle('hidden', snap.size === 0);
-                            }
-                            const statBadge = document.getElementById('statRequests');
-                            if (statBadge) {
-                                statBadge.textContent = snap.size;
-                            }
-                        }, () => {});
-                }
-            });
-        }
-    },
-
-    backendMode: 'auto',
 
     getApiBase() {
         if (window.location.port === '8080') {
@@ -77,97 +46,35 @@ const app = {
         return 'http://localhost:8080';
     },
 
-    setBackendMode(mode) {
-        this.backendMode = mode;
-        const navBadge = document.getElementById('serverStatusBadge');
-        const authBadge = document.getElementById('authServerStatus');
-
-        if (mode === 'java') {
-            if (navBadge) {
-                navBadge.textContent = '🟢 Java Backend (Port 8080)';
-                navBadge.className = 'badge-server-live';
-                navBadge.title = 'Connected to Java HttpServer & MySQL/H2 Database';
-            }
-            if (authBadge) {
-                authBadge.textContent = '🟢 Connected to Java Backend (Port 8080 & MySQL)';
-                authBadge.className = 'badge-server-live';
-            }
-        } else if (mode === 'firestore') {
-            if (navBadge) {
-                navBadge.textContent = '🔥 Firestore Cloud (Live Sync)';
-                navBadge.className = 'badge-server-live';
-                navBadge.title = 'Connected to Google Cloud Firestore — Data Persists Across All Devices';
-            }
-            if (authBadge) {
-                authBadge.textContent = '🔥 Google Cloud Firestore (Permanent Live Storage)';
-                authBadge.className = 'badge-server-live';
-            }
-        } else {
-            if (navBadge) {
-                navBadge.textContent = '🟢 Local Browser Mode';
-                navBadge.className = 'badge-server-offline';
-                navBadge.title = 'Running locally with in-browser storage.';
-            }
-            if (authBadge) {
-                authBadge.textContent = '🟢 Local Browser Mode';
-                authBadge.className = 'badge-server-offline';
-            }
-        }
-    },
-
-    // ── Networking Helper (Supports Java Backend, Cloud Firestore, & Local Storage) ─
+    // ── Networking: Java HTTP Backend (with LocalStorage Fallback) ──
     async api(endpoint, method = 'GET', data = null) {
-        // 1. If running locally on Java server port 8080, try Java backend first
-        if (window.location.port === '8080' && this.backendMode !== 'firestore') {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 1200);
+        // 1. Try connecting to the Java HttpServer (port 8080)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1200);
 
-                const url = `${this.getApiBase()}${endpoint}`;
-                const options = {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: controller.signal
-                };
-                if (data && (method === 'POST' || method === 'PUT')) {
-                    options.body = JSON.stringify(data);
-                }
-
-                const res = await fetch(url, options);
-                clearTimeout(timeoutId);
-                const json = await res.json();
-                if (res.ok && json.success !== false) {
-                    this.setBackendMode('java');
-                    return json;
-                }
-            } catch (err) {
-                // Java not running or error, fall through to Firestore
+            const url = `${this.getApiBase()}${endpoint}`;
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal
+            };
+            if (data && (method === 'POST' || method === 'PUT')) {
+                options.body = JSON.stringify(data);
             }
+
+            const res = await fetch(url, options);
+            clearTimeout(timeoutId);
+            const json = await res.json();
+            if (res.ok && json.success !== false) {
+                return json;
+            }
+        } catch (err) {
+            // Java server offline or aborted — fallback to local in-browser storage
         }
 
-        // 2. Try Google Cloud Firestore (Real-Time Cross-Device Storage)
-        if (typeof FirestoreBackend !== 'undefined' && FirestoreBackend.isAvailable()) {
-            try {
-                const result = await FirestoreBackend.handle(endpoint, method, data);
-                this.setBackendMode('firestore');
-                return result;
-            } catch (err) {
-                console.warn('Firestore request notice:', err.message);
-                if (err.message && (
-                    err.message.toLowerCase().includes('password') ||
-                    err.message.includes('already registered') ||
-                    err.message.includes('No account found') ||
-                    err.message.includes('Match not found') ||
-                    err.message.includes('Request not found')
-                )) {
-                    throw err;
-                }
-            }
-        }
-
-        // 3. Fallback to MockBackend (In-browser LocalStorage)
-        this.setBackendMode('mock');
-        return MockBackend.handle(endpoint, method, data);
+        // 2. Standalone In-Browser Local Storage Fallback
+        return LocalDataStore.handle(endpoint, method, data);
     },
 
     // ── Toast Messages ────────────────────────────────────────────
@@ -303,52 +210,380 @@ const app = {
             this.catalogue = await this.api('/api/skills/catalogue');
             const offSel = document.getElementById('catalogueOfferedSelect');
             const wanSel = document.getElementById('catalogueWantedSelect');
-            if (!offSel || !wanSel) return;
+            const modalSel = document.getElementById('newDataSkillSelect');
+            const catFilter = document.getElementById('storageCategoryFilter');
 
             let opts = '<option value="">-- Choose skill --</option>';
-            this.catalogue.forEach(s => {
-                opts += `<option value="${s.skillId}">${s.skillName} (${s.categoryName})</option>`;
-            });
-            offSel.innerHTML = opts;
-            wanSel.innerHTML = opts;
+            let modalOpts = '<option value="">-- Select from Catalogue or Choose Custom --</option>';
+            const categories = new Set();
+
+            if (this.catalogue && Array.isArray(this.catalogue)) {
+                this.catalogue.forEach(s => {
+                    opts += `<option value="${s.skillId}">${s.skillName} (${s.categoryName})</option>`;
+                    modalOpts += `<option value="${s.skillId}" data-cat="${s.categoryName}">${s.skillName} — ${s.categoryName}</option>`;
+                    if (s.categoryName) categories.add(s.categoryName);
+                });
+            }
+            modalOpts += '<option value="CUSTOM">➕ Other / Custom Skill (Type your own)...</option>';
+
+            if (offSel) offSel.innerHTML = opts;
+            if (wanSel) wanSel.innerHTML = opts;
+            if (modalSel) modalSel.innerHTML = modalOpts;
+
+            if (catFilter) {
+                let catOpts = '<option value="ALL">All Categories</option>';
+                categories.forEach(c => {
+                    catOpts += `<option value="${c}">${c}</option>`;
+                });
+                catFilter.innerHTML = catOpts;
+            }
         } catch (err) {
             console.error('Error loading catalogue:', err);
         }
     },
 
-    // ── Dashboard ─────────────────────────────────────────────────
+    // ── Dashboard & Data Storage ───────────────────────────────────
+    storedRecordsCache: [],
+
     async loadDashboard() {
         if (!this.currentUser) return;
-        document.getElementById('dashGreeting').textContent = `Welcome back, ${this.currentUser.fullName}!`;
+        const greeting = document.getElementById('dashGreeting');
+        const subtitle = document.getElementById('dashSubtitle');
+        if (greeting) greeting.textContent = `Welcome, ${this.currentUser.fullName}!`;
+        if (subtitle) {
+            const dept = this.currentUser.department || this.currentUser.dept || 'Engineering';
+            const year = this.currentUser.yearOfStudy || this.currentUser.year || 1;
+            const roll = this.currentUser.studentNumber || '';
+            subtitle.textContent = `${dept} • Year ${year}${roll ? ' • ID: ' + roll : ''}`;
+        }
 
         try {
-            const stats = await this.api(`/api/dashboard?studentId=${this.currentUser.studentId}`);
-            document.getElementById('statOffered').textContent = stats.offeredCount;
-            document.getElementById('statWanted').textContent = stats.wantedCount;
-            document.getElementById('statMatches').textContent = stats.activeMatches;
-            document.getElementById('statRequests').textContent = stats.pendingRequests;
-            document.getElementById('statRating').textContent = stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} ⭐` : 'New';
-
-            const badge = document.getElementById('navReqBadge');
-            if (stats.pendingRequests > 0) {
-                badge.textContent = stats.pendingRequests;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-
-            // Load top recommendations
-            const matches = await this.api(`/api/peers?studentId=${this.currentUser.studentId}`);
-            const topBox = document.getElementById('dashTopMatches');
-            if (!matches || matches.length === 0) {
-                topBox.innerHTML = '<p class="empty-state">Add your offered and wanted skills to discover compatible study partners!</p>';
-                return;
-            }
-
-            topBox.innerHTML = matches.slice(0, 3).map(m => this.renderPeerCard(m)).join('');
+            await this.loadStoredDataRecords();
         } catch (err) {
             console.error('Dashboard load error:', err);
         }
+    },
+
+    async loadStoredDataRecords() {
+        if (!this.currentUser) return;
+        try {
+            const sid = this.currentUser.studentId || this.currentUser.id;
+            const data = await this.api(`/api/skills/my?studentId=${sid}`);
+            const offered = data.offered || [];
+            const wanted = data.wanted || [];
+
+            // Retrieve local metadata (e.g. proficiency, notes, dateAdded)
+            const metaKey = `record_meta_${sid}`;
+            let meta = {};
+            try {
+                meta = JSON.parse(localStorage.getItem(metaKey) || '{}');
+            } catch (e) {}
+
+            const records = [];
+            offered.forEach(s => {
+                const key = `OFFERED_${s.skillId}`;
+                const m = meta[key] || {};
+                records.push({
+                    skillId: s.skillId,
+                    name: s.skillName,
+                    category: s.categoryName || 'General',
+                    type: 'OFFERED',
+                    proficiency: m.proficiency || 'Intermediate',
+                    notes: m.notes || '',
+                    dateStored: m.dateStored || 'Active'
+                });
+            });
+
+            wanted.forEach(s => {
+                const key = `WANTED_${s.skillId}`;
+                const m = meta[key] || {};
+                records.push({
+                    skillId: s.skillId,
+                    name: s.skillName,
+                    category: s.categoryName || 'General',
+                    type: 'WANTED',
+                    proficiency: m.proficiency || 'To Learn',
+                    notes: m.notes || '',
+                    dateStored: m.dateStored || 'Active'
+                });
+            });
+
+            this.storedRecordsCache = records;
+
+            // Update Metric Cards
+            const statTotal = document.getElementById('statTotalRecords');
+            const statOff = document.getElementById('statOffered');
+            const statWan = document.getElementById('statWanted');
+
+            if (statTotal) statTotal.textContent = records.length;
+            if (statOff) statOff.textContent = offered.length;
+            if (statWan) statWan.textContent = wanted.length;
+
+            this.renderStoredDataTable();
+        } catch (err) {
+            console.error('Error loading stored records:', err);
+            this.renderStoredDataTable();
+        }
+    },
+
+    renderStoredDataTable() {
+        const tbody = document.getElementById('storedDataBody');
+        const emptyState = document.getElementById('storageEmptyState');
+        const table = document.getElementById('storedDataTable');
+        if (!tbody) return;
+
+        const searchInput = document.getElementById('storageSearchInput');
+        const typeFilter = document.getElementById('storageTypeFilter');
+        const catFilter = document.getElementById('storageCategoryFilter');
+
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        const selectedType = typeFilter ? typeFilter.value : 'ALL';
+        const selectedCat = catFilter ? catFilter.value : 'ALL';
+
+        const filtered = this.storedRecordsCache.filter(r => {
+            if (selectedType !== 'ALL' && r.type !== selectedType) return false;
+            if (selectedCat !== 'ALL' && r.category !== selectedCat) return false;
+            if (query) {
+                const nameMatch = r.name.toLowerCase().includes(query);
+                const catMatch = r.category.toLowerCase().includes(query);
+                const typeMatch = (r.type === 'OFFERED' ? 'teach can teach' : 'learn want to learn').includes(query);
+                const notesMatch = (r.notes || '').toLowerCase().includes(query);
+                return nameMatch || catMatch || typeMatch || notesMatch;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            if (table) table.classList.add('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
+            return;
+        }
+
+        if (table) table.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+
+        tbody.innerHTML = filtered.map((r, idx) => {
+            const isOffered = r.type === 'OFFERED';
+            const typeBadge = isOffered
+                ? `<span class="badge-teach">⚡ Can Teach</span>`
+                : `<span class="badge-learn">🎯 Want to Learn</span>`;
+            const safeName = this.escapeHtml(r.name);
+            return `
+                <tr>
+                    <td><strong>${idx + 1}</strong></td>
+                    <td><strong>${safeName}</strong></td>
+                    <td><span class="badge-cat">${this.escapeHtml(r.category)}</span></td>
+                    <td>${typeBadge}</td>
+                    <td><span class="badge-level">${this.escapeHtml(r.proficiency)}</span></td>
+                    <td style="color: var(--text-muted); font-size: 0.82rem;">${this.escapeHtml(r.dateStored)}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-delete-record" onclick="app.handleDeleteStoredRecord(${r.skillId}, '${r.type}', '${safeName}')" title="Delete from storage">
+                            🗑️ Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    },
+
+    filterStoredData(forcedType = null) {
+        if (forcedType) {
+            const typeFilter = document.getElementById('storageTypeFilter');
+            if (typeFilter) typeFilter.value = forcedType;
+        }
+        this.renderStoredDataTable();
+    },
+
+    // ── Modal: Add / Store New Data ────────────────────────────────
+    openAddDataModal() {
+        const modal = document.getElementById('addDataModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        // Reset form inputs
+        const skillSel = document.getElementById('newDataSkillSelect');
+        const customTitle = document.getElementById('newDataCustomTitle');
+        const customGroup = document.getElementById('customSkillGroup');
+        const notes = document.getElementById('newDataNotes');
+
+        if (skillSel) skillSel.value = '';
+        if (customTitle) customTitle.value = '';
+        if (customGroup) customGroup.classList.add('hidden');
+        if (notes) notes.value = '';
+    },
+
+    closeAddDataModal() {
+        const modal = document.getElementById('addDataModal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    handleSkillSelectChange(val) {
+        const customGroup = document.getElementById('customSkillGroup');
+        const customTitle = document.getElementById('newDataCustomTitle');
+        const catSelect = document.getElementById('newDataCategory');
+
+        if (val === 'CUSTOM') {
+            if (customGroup) customGroup.classList.remove('hidden');
+            if (customTitle) customTitle.required = true;
+        } else {
+            if (customGroup) customGroup.classList.add('hidden');
+            if (customTitle) customTitle.required = false;
+
+            // Auto-fill category if selected from catalogue
+            if (val && this.catalogue) {
+                const s = this.catalogue.find(x => String(x.skillId) === String(val));
+                if (s && catSelect) {
+                    for (let opt of catSelect.options) {
+                        if (opt.value.toLowerCase().includes(s.categoryName.toLowerCase()) ||
+                            s.categoryName.toLowerCase().includes(opt.value.toLowerCase())) {
+                            catSelect.value = opt.value;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    },
+
+    async handleSaveDataRecord(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!this.currentUser) return;
+
+        const skillSel = document.getElementById('newDataSkillSelect');
+        const customTitle = document.getElementById('newDataCustomTitle');
+        const category = document.getElementById('newDataCategory').value;
+        const type = document.getElementById('newDataType').value;
+        const proficiency = document.getElementById('newDataProficiency').value;
+        const notes = document.getElementById('newDataNotes').value.trim();
+
+        let skillId = null;
+        let skillName = '';
+
+        if (skillSel.value === 'CUSTOM') {
+            skillName = customTitle.value.trim();
+            if (!skillName) {
+                this.showToast('Please enter a custom skill title', 'error');
+                return;
+            }
+            const existing = (this.catalogue || []).find(x => x.skillName.toLowerCase() === skillName.toLowerCase());
+            if (existing) {
+                skillId = existing.skillId;
+            } else {
+                skillId = Math.abs(this.hashCode(skillName)) % 9000 + 1000;
+                if (!this.catalogue) this.catalogue = [];
+                this.catalogue.push({
+                    skillId,
+                    skillName,
+                    categoryName: category
+                });
+            }
+        } else {
+            skillId = parseInt(skillSel.value);
+            const found = (this.catalogue || []).find(x => x.skillId === skillId);
+            skillName = found ? found.skillName : `Skill #${skillId}`;
+        }
+
+        const endpoint = type === 'OFFERED' ? '/api/skills/offered/add' : '/api/skills/wanted/add';
+        const sid = this.currentUser.studentId || this.currentUser.id;
+
+        try {
+            await this.api(endpoint, 'POST', {
+                studentId: sid,
+                skillId: skillId
+            });
+
+            // Save extra metadata into persistent localStorage
+            const metaKey = `record_meta_${sid}`;
+            let meta = {};
+            try { meta = JSON.parse(localStorage.getItem(metaKey) || '{}'); } catch (err) {}
+            meta[`${type}_${skillId}`] = {
+                proficiency,
+                notes,
+                dateStored: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            };
+            localStorage.setItem(metaKey, JSON.stringify(meta));
+
+            this.closeAddDataModal();
+            this.showToast(`"${skillName}" stored successfully!`, 'success');
+            await this.loadStoredDataRecords();
+        } catch (err) {
+            this.showToast(err.message || 'Error saving data record', 'error');
+        }
+    },
+
+    hashCode(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash << 5) - hash + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash;
+    },
+
+    async handleDeleteStoredRecord(skillId, type, skillName) {
+        if (!this.currentUser) return;
+        if (!confirm(`Are you sure you want to remove "${skillName}" from your stored records?`)) {
+            return;
+        }
+
+        const endpoint = type === 'OFFERED' ? '/api/skills/offered/remove' : '/api/skills/wanted/remove';
+        const sid = this.currentUser.studentId || this.currentUser.id;
+
+        try {
+            await this.api(endpoint, 'POST', {
+                studentId: sid,
+                skillId: parseInt(skillId)
+            });
+
+            // Clean metadata
+            const metaKey = `record_meta_${sid}`;
+            try {
+                let meta = JSON.parse(localStorage.getItem(metaKey) || '{}');
+                delete meta[`${type}_${skillId}`];
+                localStorage.setItem(metaKey, JSON.stringify(meta));
+            } catch (err) {}
+
+            this.showToast(`"${skillName}" removed from storage.`, 'success');
+            await this.loadStoredDataRecords();
+        } catch (err) {
+            this.showToast(err.message || 'Error deleting record', 'error');
+        }
+    },
+
+    exportStoredData() {
+        if (!this.currentUser) return;
+        const payload = {
+            student: {
+                studentNumber: this.currentUser.studentNumber,
+                fullName: this.currentUser.fullName,
+                email: this.currentUser.email,
+                department: this.currentUser.department || this.currentUser.dept,
+                yearOfStudy: this.currentUser.yearOfStudy || this.currentUser.year
+            },
+            exportDate: new Date().toISOString(),
+            totalStoredRecords: this.storedRecordsCache.length,
+            records: this.storedRecordsCache
+        };
+
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute('href', dataStr);
+        downloadAnchor.setAttribute('download', `student_${this.currentUser.studentNumber || 'records'}_data.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        this.showToast('Data exported to JSON file!', 'success');
     },
 
     // ── Find Peers ────────────────────────────────────────────────
@@ -863,591 +1098,12 @@ const STARTER_FEEDBACK = [
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * GOOGLE CLOUD FIRESTORE BACKEND (PERMANENT REAL-TIME CLOUD STORAGE)
- * Synchronizes student accounts, skills, requests, matches & feedback
- * in real-time across all mobile phones, laptops, and web browsers.
+ * LOCAL DATA STORE (IN-BROWSER STORAGE FALLBACK FOR STANDALONE DEMO)
+ * Stores student accounts, skills, and records in localStorage when
+ * running directly in the browser without the Java server running.
  * ══════════════════════════════════════════════════════════════════════
  */
-const FirestoreBackend = {
-    db: null,
-    initPromise: null,
-    skills: SKILL_CATALOGUE,
-
-    isAvailable() {
-        return typeof firebase !== 'undefined' && typeof firebase.firestore === 'function';
-    },
-
-    normalizeStudent(s) {
-        if (!s) return null;
-        const sid = Number(s.studentId ?? s.id ?? 0);
-        return {
-            studentId: sid,
-            id: sid,
-            studentNumber: s.studentNumber || `STU${sid}`,
-            fullName: s.fullName || s.name || 'Student',
-            name: s.fullName || s.name || 'Student',
-            email: (s.email || '').trim().toLowerCase(),
-            password: s.password || '',
-            department: s.department || s.dept || 'Engineering',
-            dept: s.department || s.dept || 'Engineering',
-            yearOfStudy: Number(s.yearOfStudy ?? s.year ?? 1),
-            year: Number(s.yearOfStudy ?? s.year ?? 1),
-            bio: s.bio || '',
-            offered: Array.isArray(s.offered) ? s.offered : [],
-            wanted: Array.isArray(s.wanted) ? s.wanted : []
-        };
-    },
-
-    skillToId(item) {
-        if (typeof item === 'number') return item;
-        const s = this.skills.find(x => x.skillName.toLowerCase() === String(item).toLowerCase());
-        return s ? s.skillId : null;
-    },
-
-    skillToObject(item) {
-        if (typeof item === 'number') {
-            const s = this.skills.find(x => x.skillId === item);
-            if (s) return s;
-        }
-        const found = this.skills.find(x => x.skillName.toLowerCase() === String(item).toLowerCase());
-        if (found) return found;
-        return { skillId: typeof item === 'number' ? item : 999, skillName: String(item), categoryName: 'General' };
-    },
-
-    normalizeRequest(r) {
-        if (!r) return null;
-        const reqId = Number(r.requestId ?? r.id ?? Date.now());
-        const senderId = Number(r.senderId ?? r.fromId ?? 0);
-        const receiverId = Number(r.receiverId ?? r.toId ?? 0);
-        return {
-            requestId: reqId,
-            id: reqId,
-            senderId,
-            fromId: senderId,
-            senderName: r.senderName || '',
-            senderDept: r.senderDept || '',
-            receiverId,
-            toId: receiverId,
-            receiverName: r.receiverName || '',
-            receiverDept: r.receiverDept || '',
-            message: r.message || r.msg || '',
-            msg: r.message || r.msg || '',
-            status: r.status || 'PENDING',
-            createdAt: r.createdAt || (r.timestamp ? new Date(Number(r.timestamp)).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10)),
-            timestamp: r.timestamp || Date.now()
-        };
-    },
-
-    async init() {
-        if (this.db) return this.db;
-        if (this.initPromise) return this.initPromise;
-
-        this.initPromise = (async () => {
-            if (!this.isAvailable()) {
-                throw new Error('Firebase SDK not loaded.');
-            }
-
-            const firebaseConfig = {
-                apiKey: "AIzaSyCchbDm0Gghty4lIeYXWhKZs2LMwXCvcoU",
-                authDomain: "peer-to-peer-interaction-7.firebaseapp.com",
-                projectId: "peer-to-peer-interaction-7",
-                storageBucket: "peer-to-peer-interaction-7.firebasestorage.app",
-                messagingSenderId: "780710040418"
-            };
-
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
-
-            this.db = firebase.firestore();
-
-            try {
-                await this.db.enablePersistence({ synchronizeTabs: true });
-            } catch (e) {}
-
-            await this.ensureSeeded();
-            return this.db;
-        })();
-
-        return this.initPromise;
-    },
-
-    async ensureSeeded() {
-        try {
-            const snap = await this.db.collection('students').limit(1).get();
-            if (snap.empty) {
-                const batch = this.db.batch();
-                for (const s of STARTER_STUDENTS) {
-                    batch.set(this.db.collection('students').doc(String(s.studentId)), s);
-                }
-                for (const r of STARTER_REQUESTS) {
-                    batch.set(this.db.collection('requests').doc(String(r.requestId)), {
-                        id: r.requestId,
-                        requestId: r.requestId,
-                        fromId: r.senderId,
-                        senderId: r.senderId,
-                        toId: r.receiverId,
-                        receiverId: r.receiverId,
-                        senderName: r.senderName,
-                        receiverName: r.receiverName,
-                        senderDept: r.senderDept,
-                        receiverDept: r.receiverDept,
-                        msg: r.message,
-                        message: r.message,
-                        status: r.status,
-                        createdAt: r.createdAt,
-                        timestamp: Date.now()
-                    });
-                }
-                for (const m of STARTER_MATCHES) {
-                    batch.set(this.db.collection('matches').doc(String(m.matchId)), m);
-                }
-                for (const f of STARTER_FEEDBACK) {
-                    batch.set(this.db.collection('feedback').doc(String(f.feedbackId)), f);
-                }
-                await batch.commit();
-                console.log('✅ Firestore automatically seeded with starter college community!');
-            }
-        } catch (err) {
-            console.warn('Seed check notice:', err.message);
-        }
-    },
-
-    async handle(endpoint, method = 'GET', data = null) {
-        await this.init();
-        const url = new URL(endpoint, 'http://dummy.local');
-        const path = url.pathname;
-        const params = Object.fromEntries(url.searchParams);
-
-        if (path === '/api/skills/catalogue') {
-            return this.skills;
-        }
-
-        if (path === '/api/auth/login') {
-            const emailInput = (data.email || '').trim().toLowerCase();
-            const snap = await this.db.collection('students')
-                .where('email', '==', emailInput)
-                .limit(1)
-                .get();
-
-            if (snap.empty) {
-                throw new Error('No account found with this email address.');
-            }
-            const rawStu = snap.docs[0].data();
-            const stu = this.normalizeStudent(rawStu);
-
-            // Strict password check: Only allow login with the exact right password
-            const expectedPassword = rawStu.password || 'password123';
-            const enteredPassword = data.password || '';
-
-            if (enteredPassword !== expectedPassword) {
-                throw new Error('Incorrect password. Please enter the correct password.');
-            }
-
-            if (!rawStu.password) {
-                this.db.collection('students').doc(String(stu.studentId)).update({ password: expectedPassword }).catch(() => {});
-                stu.password = expectedPassword;
-            }
-
-            return { success: true, student: stu };
-        }
-
-        if (path === '/api/auth/register') {
-            const emailInput = (data.email || '').trim().toLowerCase();
-            const existingSnap = await this.db.collection('students')
-                .where('email', '==', emailInput)
-                .limit(1)
-                .get();
-
-            if (!existingSnap.empty) {
-                throw new Error('Email already registered.');
-            }
-
-            const allSnap = await this.db.collection('students').get();
-            let maxId = 0;
-            allSnap.forEach(d => {
-                const s = d.data();
-                const sid = Number(s.studentId ?? s.id ?? 0);
-                if (sid > maxId) maxId = sid;
-            });
-            const newId = maxId + 1;
-
-            const stu = {
-                id: newId,
-                studentId: newId,
-                studentNumber: data.studentNumber || `STU${newId}`,
-                name: data.fullName,
-                fullName: data.fullName,
-                email: emailInput,
-                password: data.password || '',
-                dept: data.department || '',
-                department: data.department || '',
-                year: parseInt(data.yearOfStudy) || 1,
-                yearOfStudy: parseInt(data.yearOfStudy) || 1,
-                bio: data.bio || '',
-                offered: [],
-                wanted: [],
-                createdAt: new Date().toISOString()
-            };
-
-            await this.db.collection('students').doc(String(newId)).set(stu);
-            return { success: true, student: this.normalizeStudent(stu) };
-        }
-
-        if (path === '/api/dashboard') {
-            const sid = parseInt(params.studentId);
-            const stuDoc = await this.db.collection('students').doc(String(sid)).get();
-            const stu = stuDoc.exists ? this.normalizeStudent(stuDoc.data()) : { offered: [], wanted: [] };
-            const offCount = (stu.offered || []).length;
-            const wanCount = (stu.wanted || []).length;
-
-            const [m1, m2] = await Promise.all([
-                this.db.collection('matches').where('studentId1', '==', sid).where('isActive', '==', true).get(),
-                this.db.collection('matches').where('studentId2', '==', sid).where('isActive', '==', true).get()
-            ]);
-            const matchMap = new Map();
-            m1.forEach(d => matchMap.set(d.id, d.data()));
-            m2.forEach(d => matchMap.set(d.id, d.data()));
-
-            const [reqSnapTo, reqSnapRecv] = await Promise.all([
-                this.db.collection('requests').where('toId', '==', sid).where('status', '==', 'PENDING').get(),
-                this.db.collection('requests').where('receiverId', '==', sid).where('status', '==', 'PENDING').get()
-            ]);
-            const pendingSet = new Set();
-            reqSnapTo.forEach(d => pendingSet.add(d.id));
-            reqSnapRecv.forEach(d => pendingSet.add(d.id));
-
-            const fbSnap = await this.db.collection('feedback').where('reviewedId', '==', sid).get();
-            let totalRating = 0;
-            fbSnap.forEach(d => { totalRating += (d.data().rating || 0); });
-            const avg = fbSnap.size > 0 ? (totalRating / fbSnap.size) : 0;
-
-            return {
-                offeredCount: offCount,
-                wantedCount: wanCount,
-                activeMatches: matchMap.size,
-                pendingRequests: pendingSet.size,
-                avgRating: avg
-            };
-        }
-
-        if (path === '/api/skills/my') {
-            const sid = parseInt(params.studentId);
-            const stuDoc = await this.db.collection('students').doc(String(sid)).get();
-            const stu = stuDoc.exists ? this.normalizeStudent(stuDoc.data()) : {};
-            const offItems = stu.offered || [];
-            const wanItems = stu.wanted || [];
-            return {
-                offered: offItems.map(item => this.skillToObject(item)).filter(Boolean),
-                wanted: wanItems.map(item => this.skillToObject(item)).filter(Boolean)
-            };
-        }
-
-        if (path === '/api/skills/offered/add') {
-            const sid = data.studentId;
-            const skid = data.skillId;
-            const skillObj = this.skills.find(s => s.skillId === Number(skid));
-            const skillName = skillObj ? skillObj.skillName : skid;
-            await this.db.collection('students').doc(String(sid)).update({
-                offered: firebase.firestore.FieldValue.arrayUnion(skillName)
-            });
-            return { success: true };
-        }
-
-        if (path === '/api/skills/offered/remove') {
-            const sid = data.studentId;
-            const skid = data.skillId;
-            const skillObj = this.skills.find(s => s.skillId === Number(skid));
-            const skillName = skillObj ? skillObj.skillName : skid;
-            await this.db.collection('students').doc(String(sid)).update({
-                offered: firebase.firestore.FieldValue.arrayRemove(skillName, skid, Number(skid))
-            });
-            return { success: true };
-        }
-
-        if (path === '/api/skills/wanted/add') {
-            const sid = data.studentId;
-            const skid = data.skillId;
-            const skillObj = this.skills.find(s => s.skillId === Number(skid));
-            const skillName = skillObj ? skillObj.skillName : skid;
-            await this.db.collection('students').doc(String(sid)).update({
-                wanted: firebase.firestore.FieldValue.arrayUnion(skillName)
-            });
-            return { success: true };
-        }
-
-        if (path === '/api/skills/wanted/remove') {
-            const sid = data.studentId;
-            const skid = data.skillId;
-            const skillObj = this.skills.find(s => s.skillId === Number(skid));
-            const skillName = skillObj ? skillObj.skillName : skid;
-            await this.db.collection('students').doc(String(sid)).update({
-                wanted: firebase.firestore.FieldValue.arrayRemove(skillName, skid, Number(skid))
-            });
-            return { success: true };
-        }
-
-        if (path === '/api/peers') {
-            const sid = parseInt(params.studentId);
-            const stuDoc = await this.db.collection('students').doc(String(sid)).get();
-            const myData = stuDoc.exists ? this.normalizeStudent(stuDoc.data()) : { offered: [], wanted: [] };
-            const myOfferedIds = (myData.offered || []).map(x => this.skillToId(x)).filter(Boolean);
-            const myWantedIds = (myData.wanted || []).map(x => this.skillToId(x)).filter(Boolean);
-
-            const allSnap = await this.db.collection('students').get();
-            const results = [];
-
-            allSnap.forEach(d => {
-                const peer = this.normalizeStudent(d.data());
-                if (peer.studentId === sid) return;
-
-                const peerOfferedIds = (peer.offered || []).map(x => this.skillToId(x)).filter(Boolean);
-                const peerWantedIds = (peer.wanted || []).map(x => this.skillToId(x)).filter(Boolean);
-
-                const canTeachMeIds = peerOfferedIds.filter(id => myWantedIds.includes(id));
-                const wantsFromMeIds = myOfferedIds.filter(id => peerWantedIds.includes(id));
-
-                const fwd = peerWantedIds.length ? (wantsFromMeIds.length / peerWantedIds.length) : 0;
-                const bwd = peerOfferedIds.length ? (canTeachMeIds.length / peerOfferedIds.length) : 0;
-                const score = Math.round(((fwd + bwd) / 2) * 100);
-
-                results.push({
-                    peer,
-                    score,
-                    canTeachMe: canTeachMeIds.map(id => this.skillToObject(id)).filter(Boolean),
-                    wantsFromMe: wantsFromMeIds.map(id => this.skillToObject(id)).filter(Boolean)
-                });
-            });
-
-            results.sort((a, b) => b.score - a.score);
-            return results;
-        }
-
-        if (path === '/api/peers/profile') {
-            const pid = parseInt(params.peerId);
-            const myId = parseInt(params.currentUserId);
-
-            const [pDoc, myDoc, reqSnap, fbSnap] = await Promise.all([
-                this.db.collection('students').doc(String(pid)).get(),
-                this.db.collection('students').doc(String(myId)).get(),
-                this.db.collection('requests')
-                    .where('fromId', '==', myId)
-                    .where('toId', '==', pid)
-                    .where('status', '==', 'PENDING')
-                    .get(),
-                this.db.collection('feedback').where('reviewedId', '==', pid).get()
-            ]);
-
-            const peer = pDoc.exists ? this.normalizeStudent(pDoc.data()) : null;
-            const myData = myDoc.exists ? this.normalizeStudent(myDoc.data()) : {};
-
-            const myOfferedIds = (myData.offered || []).map(x => this.skillToId(x)).filter(Boolean);
-            const myWantedIds = (myData.wanted || []).map(x => this.skillToId(x)).filter(Boolean);
-            const peerOfferedIds = ((peer && peer.offered) || []).map(x => this.skillToId(x)).filter(Boolean);
-            const peerWantedIds = ((peer && peer.wanted) || []).map(x => this.skillToId(x)).filter(Boolean);
-
-            const canTeachMeIds = peerOfferedIds.filter(id => myWantedIds.includes(id));
-            const wantsFromMeIds = myOfferedIds.filter(id => peerWantedIds.includes(id));
-            const fwd = peerWantedIds.length ? (wantsFromMeIds.length / peerWantedIds.length) : 0;
-            const bwd = peerOfferedIds.length ? (canTeachMeIds.length / peerOfferedIds.length) : 0;
-            const score = Math.round(((fwd + bwd) / 2) * 100);
-
-            let totalRating = 0;
-            const reviews = [];
-            fbSnap.forEach(d => {
-                const data = d.data();
-                reviews.push(data);
-                totalRating += (data.rating || 0);
-            });
-            const avg = reviews.length ? (totalRating / reviews.length) : 0;
-
-            return {
-                peer,
-                matchScore: score,
-                avgRating: avg,
-                hasExistingRequest: !reqSnap.empty,
-                offeredSkills: (peer ? peer.offered : []).map(x => this.skillToObject(x)).filter(Boolean),
-                wantedSkills: (peer ? peer.wanted : []).map(x => this.skillToObject(x)).filter(Boolean),
-                reviews
-            };
-        }
-
-        if (path === '/api/requests/incoming') {
-            const sid = parseInt(params.studentId);
-            const [snap1, snap2] = await Promise.all([
-                this.db.collection('requests').where('toId', '==', sid).get(),
-                this.db.collection('requests').where('receiverId', '==', sid).get()
-            ]);
-            const map = new Map();
-            snap1.forEach(d => map.set(d.id, this.normalizeRequest(d.data())));
-            snap2.forEach(d => map.set(d.id, this.normalizeRequest(d.data())));
-            return Array.from(map.values());
-        }
-
-        if (path === '/api/requests/outgoing') {
-            const sid = parseInt(params.studentId);
-            const [snap1, snap2] = await Promise.all([
-                this.db.collection('requests').where('fromId', '==', sid).get(),
-                this.db.collection('requests').where('senderId', '==', sid).get()
-            ]);
-            const map = new Map();
-            snap1.forEach(d => map.set(d.id, this.normalizeRequest(d.data())));
-            snap2.forEach(d => map.set(d.id, this.normalizeRequest(d.data())));
-            return Array.from(map.values());
-        }
-
-        if (path === '/api/requests/send') {
-            const [senderDoc, receiverDoc] = await Promise.all([
-                this.db.collection('students').doc(String(data.senderId)).get(),
-                this.db.collection('students').doc(String(data.receiverId)).get()
-            ]);
-            const sData = senderDoc.exists ? this.normalizeStudent(senderDoc.data()) : {};
-            const rData = receiverDoc.exists ? this.normalizeStudent(receiverDoc.data()) : {};
-
-            const reqId = Date.now();
-            const reqObj = {
-                id: reqId,
-                requestId: reqId,
-                fromId: data.senderId,
-                senderId: data.senderId,
-                senderName: sData.fullName || 'Student',
-                senderDept: sData.department || '',
-                toId: data.receiverId,
-                receiverId: data.receiverId,
-                receiverName: rData.fullName || 'Student',
-                receiverDept: rData.department || '',
-                msg: data.message || '',
-                message: data.message || '',
-                status: 'PENDING',
-                timestamp: Date.now(),
-                createdAt: new Date().toISOString().substring(0, 10)
-            };
-            await this.db.collection('requests').doc(String(reqId)).set(reqObj);
-            return { success: true };
-        }
-
-        if (path === '/api/requests/respond') {
-            const reqRef = this.db.collection('requests').doc(String(data.requestId));
-            const reqDoc = await reqRef.get();
-            if (!reqDoc.exists) throw new Error('Request not found.');
-
-            const req = this.normalizeRequest(reqDoc.data());
-            const newStatus = (data.action === 'ACCEPT') ? 'ACCEPTED' : 'REJECTED';
-            await reqRef.update({ status: newStatus });
-
-            if (data.action === 'ACCEPT') {
-                const [s1Doc, s2Doc] = await Promise.all([
-                    this.db.collection('students').doc(String(req.senderId)).get(),
-                    this.db.collection('students').doc(String(req.receiverId)).get()
-                ]);
-                const matchId = Date.now();
-                const matchObj = {
-                    matchId,
-                    id: matchId,
-                    requestId: req.requestId,
-                    studentId1: req.senderId,
-                    fromId: req.senderId,
-                    studentId2: req.receiverId,
-                    toId: req.receiverId,
-                    studentIds: [req.senderId, req.receiverId],
-                    matchScore: data.matchScore || 85.0,
-                    isActive: true,
-                    matchedAt: new Date().toISOString().substring(0, 10),
-                    student1: s1Doc.exists ? this.normalizeStudent(s1Doc.data()) : { studentId: req.senderId },
-                    student2: s2Doc.exists ? this.normalizeStudent(s2Doc.data()) : { studentId: req.receiverId }
-                };
-                await this.db.collection('matches').doc(String(matchId)).set(matchObj);
-            }
-            return { success: true };
-        }
-
-        if (path === '/api/matches') {
-            const sid = parseInt(params.studentId);
-            const [m1, m2, fbSnap] = await Promise.all([
-                this.db.collection('matches').where('studentId1', '==', sid).where('isActive', '==', true).get(),
-                this.db.collection('matches').where('studentId2', '==', sid).where('isActive', '==', true).get(),
-                this.db.collection('feedback').where('reviewerId', '==', sid).get()
-            ]);
-            const matchMap = new Map();
-            m1.forEach(d => matchMap.set(d.id, d.data()));
-            m2.forEach(d => matchMap.set(d.id, d.data()));
-
-            const reviewedMatchIds = new Set();
-            fbSnap.forEach(d => reviewedMatchIds.add(d.data().matchId));
-
-            const results = [];
-            for (const m of matchMap.values()) {
-                results.push({
-                    match: m,
-                    reviewed: reviewedMatchIds.has(m.matchId)
-                });
-            }
-            return results;
-        }
-
-        if (path === '/api/feedback/submit') {
-            const revDoc = await this.db.collection('students').doc(String(data.reviewerId)).get();
-            const reviewer = revDoc.exists ? this.normalizeStudent(revDoc.data()) : {};
-
-            let reviewedId = 0;
-            const matchDoc = await this.db.collection('matches').doc(String(data.matchId)).get();
-            if (matchDoc.exists) {
-                const m = matchDoc.data();
-                reviewedId = (m.studentId1 === data.reviewerId) ? m.studentId2 : m.studentId1;
-            }
-
-            const fid = Date.now();
-            const stars = '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating);
-            const fbObj = {
-                feedbackId: fid,
-                matchId: data.matchId,
-                reviewerId: data.reviewerId,
-                reviewerName: reviewer.fullName || 'Peer',
-                reviewedId,
-                rating: data.rating,
-                ratingStars: stars,
-                comment: data.comment || '',
-                createdAt: new Date().toISOString().substring(0, 10)
-            };
-            await this.db.collection('feedback').doc(String(fid)).set(fbObj);
-            return { success: true };
-        }
-
-        if (path === '/api/feedback/student') {
-            const sid = parseInt(params.studentId);
-            const snap = await this.db.collection('feedback').where('reviewedId', '==', sid).get();
-            const list = [];
-            snap.forEach(d => list.push(d.data()));
-            return list;
-        }
-
-        if (path === '/api/profile/update') {
-            const stuRef = this.db.collection('students').doc(String(data.studentId));
-            await stuRef.update({
-                name: data.fullName,
-                fullName: data.fullName,
-                dept: data.department,
-                department: data.department,
-                year: parseInt(data.yearOfStudy) || 1,
-                yearOfStudy: parseInt(data.yearOfStudy) || 1,
-                bio: data.bio || ''
-            });
-            const updated = await stuRef.get();
-            return { success: true, student: this.normalizeStudent(updated.data()) };
-        }
-
-        return { success: true };
-    }
-};
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * STANDALONE MOCK BACKEND FOR VS CODE LIVE SERVER (OFFLINE FALLBACK)
- * Automatically handles data & executes MatchingAlgorithm in-browser
- * when running directly from VS Code Live Server without Java or Firestore.
- * ══════════════════════════════════════════════════════════════════════
- */
-const MockBackend = {
+const LocalDataStore = {
     skills: SKILL_CATALOGUE,
 
     getState() {
@@ -1542,9 +1198,10 @@ const MockBackend = {
             const sid = parseInt(params.studentId);
             const offIds = state.offered[sid] || [];
             const wanIds = state.wanted[sid] || [];
+            const allSkills = (typeof app !== 'undefined' && app.catalogue && app.catalogue.length) ? app.catalogue : this.skills;
             return {
-                offered: offIds.map(id => this.skills.find(s => s.skillId === id)).filter(Boolean),
-                wanted: wanIds.map(id => this.skills.find(s => s.skillId === id)).filter(Boolean)
+                offered: offIds.map(id => allSkills.find(s => s.skillId === id) || { skillId: id, skillName: `Skill #${id}`, categoryName: 'General' }).filter(Boolean),
+                wanted: wanIds.map(id => allSkills.find(s => s.skillId === id) || { skillId: id, skillName: `Skill #${id}`, categoryName: 'General' }).filter(Boolean)
             };
         }
 
