@@ -21,7 +21,7 @@ public class DatabaseInitializer {
 
     public static void initializeIfNeeded(Connection conn, boolean isEmbedded) {
         if (!tablesExist(conn)) {
-            System.out.println("[DB-Init] Tables not detected. Automatically initializing schema and sample data...");
+            System.out.println("[DB-Init] Tables not detected. Automatically initializing schema and skill catalog...");
             createSchema(conn, isEmbedded);
             populateSampleData(conn);
             System.out.println("[DB-Init] Database initialization complete! System ready.");
