@@ -836,30 +836,10 @@ const SKILL_CATALOGUE = [
     { skillId: 30, skillName: 'UI/UX Design', categoryId: 7, categoryName: 'Design & UX' }
 ];
 
-const STARTER_STUDENTS = [
-    { studentId: 1, studentNumber: 'CS2024001', fullName: 'Saketh Reddy', email: 'saketh.reddy@college.edu', password: 'password123', department: 'Computer Science', yearOfStudy: 3, bio: 'Passionate about backend development and databases. Looking to expand into Data Science.', offered: [1, 19, 20, 3, 26], wanted: [2, 14, 15, 13] },
-    { studentId: 2, studentNumber: 'CS2024002', fullName: 'Priya Sharma', email: 'priya.sharma@college.edu', password: 'password123', department: 'Information Technology', yearOfStudy: 3, bio: 'Data Science enthusiast who loves Python and Machine Learning. Want to learn Java.', offered: [2, 14, 16, 15], wanted: [1, 19, 12, 9] },
-    { studentId: 3, studentNumber: 'CS2024003', fullName: 'Arjun Mehta', email: 'arjun.mehta@college.edu', password: 'password123', department: 'Computer Science', yearOfStudy: 2, bio: 'Full-stack web developer. Excited about mobile apps and AI.', offered: [9, 10, 5, 11], wanted: [24, 2, 23] },
-    { studentId: 4, studentNumber: 'CS2024004', fullName: 'Divya Nair', email: 'divya.nair@college.edu', password: 'password123', department: 'Computer Science', yearOfStudy: 3, bio: 'Mobile developer with Flutter expertise. Keen to learn web development.', offered: [24, 23, 6], wanted: [9, 10, 14] },
-    { studentId: 5, studentNumber: 'CS2024005', fullName: 'Rahul Verma', email: 'rahul.verma@college.edu', password: 'password123', department: 'Information Technology', yearOfStudy: 4, bio: 'DevOps and cloud enthusiast. Love automating things.', offered: [28, 27, 26, 29], wanted: [2, 19] },
-    { studentId: 6, studentNumber: 'CS2024006', fullName: 'Anjali Singh', email: 'anjali.singh@college.edu', password: 'password123', department: 'Computer Applications', yearOfStudy: 2, bio: 'Creative designer who codes. Looking to learn Python and Android.', offered: [30, 9, 5], wanted: [2, 23] }
-];
-
-const STARTER_REQUESTS = [
-    { requestId: 101, senderId: 2, senderName: 'Priya Sharma', senderDept: 'Information Technology', receiverId: 1, receiverName: 'Saketh Reddy', receiverDept: 'Computer Science', message: 'Hey Saketh, saw you are strong in Java & SQL! I can teach Python/ML in exchange.', status: 'PENDING', createdAt: '2026-09-09' }
-];
-
-const STARTER_MATCHES = [
-    {
-        matchId: 201, requestId: 99, studentId1: 1, studentId2: 5, studentIds: [1, 5], matchScore: 85.0, isActive: true, matchedAt: '2026-09-08',
-        student1: { studentId: 1, fullName: 'Saketh Reddy', department: 'Computer Science', email: 'saketh.reddy@college.edu' },
-        student2: { studentId: 5, fullName: 'Rahul Verma', department: 'Information Technology', email: 'rahul.verma@college.edu' }
-    }
-];
-
-const STARTER_FEEDBACK = [
-    { feedbackId: 1, matchId: 201, reviewerId: 5, reviewerName: 'Rahul Verma', reviewedId: 1, rating: 5, ratingStars: '★★★★★', comment: 'Saketh helped me understand SQL joins and database indexes clearly!', createdAt: '2026-09-09' }
-];
+const STARTER_STUDENTS = [];
+const STARTER_REQUESTS = [];
+const STARTER_MATCHES = [];
+const STARTER_FEEDBACK = [];
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -973,44 +953,7 @@ const FirestoreBackend = {
     },
 
     async ensureSeeded() {
-        try {
-            const snap = await this.db.collection('students').limit(1).get();
-            if (snap.empty) {
-                const batch = this.db.batch();
-                for (const s of STARTER_STUDENTS) {
-                    batch.set(this.db.collection('students').doc(String(s.studentId)), s);
-                }
-                for (const r of STARTER_REQUESTS) {
-                    batch.set(this.db.collection('requests').doc(String(r.requestId)), {
-                        id: r.requestId,
-                        requestId: r.requestId,
-                        fromId: r.senderId,
-                        senderId: r.senderId,
-                        toId: r.receiverId,
-                        receiverId: r.receiverId,
-                        senderName: r.senderName,
-                        receiverName: r.receiverName,
-                        senderDept: r.senderDept,
-                        receiverDept: r.receiverDept,
-                        msg: r.message,
-                        message: r.message,
-                        status: r.status,
-                        createdAt: r.createdAt,
-                        timestamp: Date.now()
-                    });
-                }
-                for (const m of STARTER_MATCHES) {
-                    batch.set(this.db.collection('matches').doc(String(m.matchId)), m);
-                }
-                for (const f of STARTER_FEEDBACK) {
-                    batch.set(this.db.collection('feedback').doc(String(f.feedbackId)), f);
-                }
-                await batch.commit();
-                console.log('✅ Firestore automatically seeded with starter college community!');
-            }
-        } catch (err) {
-            console.warn('Seed check notice:', err.message);
-        }
+        // Sample accounts removed - start with clean database
     },
 
     async handle(endpoint, method = 'GET', data = null) {
@@ -1453,29 +1396,23 @@ const MockBackend = {
     getState() {
         let state = localStorage.getItem('mock_p2p_state');
         if (state) {
-            try { return JSON.parse(state); } catch (e) {}
+            try {
+                const parsed = JSON.parse(state);
+                if (parsed.students && parsed.students.some(s => s.studentNumber && s.studentNumber.startsWith('CS202400'))) {
+                    localStorage.removeItem('mock_p2p_state');
+                    state = null;
+                } else {
+                    return parsed;
+                }
+            } catch (e) {}
         }
         state = {
-            students: JSON.parse(JSON.stringify(STARTER_STUDENTS)),
-            offered: {
-                1: [1, 19, 20, 3, 26], // Java, SQL, MySQL, C, Git
-                2: [2, 14, 16, 15],     // Python, ML, Data Analysis, Deep Learning
-                3: [9, 10, 5, 11],      // HTML/CSS, React, JS, Node
-                4: [24, 23, 6],         // Flutter, Android, Kotlin
-                5: [28, 27, 26, 29],    // Linux, Docker, Git, AWS
-                6: [30, 9, 5]           // UI/UX, HTML/CSS, JS
-            },
-            wanted: {
-                1: [2, 14, 15, 13],     // Python, ML, Deep Learning, Django
-                2: [1, 19, 12, 9],      // Java, SQL, Spring Boot, HTML/CSS
-                3: [24, 2, 23],         // Flutter, Python, Android
-                4: [9, 10, 14],         // HTML/CSS, React, ML
-                5: [2, 19],             // Python, SQL
-                6: [2, 23]              // Python, Android
-            },
-            requests: JSON.parse(JSON.stringify(STARTER_REQUESTS)),
-            matches: JSON.parse(JSON.stringify(STARTER_MATCHES)),
-            feedback: JSON.parse(JSON.stringify(STARTER_FEEDBACK))
+            students: [],
+            offered: {},
+            wanted: {},
+            requests: [],
+            matches: [],
+            feedback: []
         };
         this.saveState(state);
         return state;

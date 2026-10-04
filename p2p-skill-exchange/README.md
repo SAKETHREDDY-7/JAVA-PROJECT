@@ -122,16 +122,11 @@ A modern, cross-device **Peer-to-Peer Skill Exchange Web Application** developed
 
 ---
 
-## 🔑 Demo Login Credentials (1-Click Buttons in Web UI)
+## 🔑 Getting Started
 
-Pre-loaded student accounts available for immediate evaluation:
-
-| Student Name | Email Address | Password | Major / Department |
-|:---|:---|:---|:---|
-| **Saketh Reddy** | `saketh.reddy@college.edu` | `Password@123` | Computer Science (Year 3) |
-| **Priya Sharma** | `priya.sharma@college.edu` | `Password@123` | Information Technology (Year 3) |
-| **Arjun Mehta** | `arjun.mehta@college.edu` | `Password@123` | Computer Science (Year 2) |
-| **Divya Nair** | `divya.nair@college.edu` | `Password@123` | Computer Science (Year 3) |
+1. Launch the application.
+2. Click **"Register"** to create a new student account with your roll number and college email.
+3. Select your offered skills and wanted skills to start discovering peer matches!
 
 ---
 

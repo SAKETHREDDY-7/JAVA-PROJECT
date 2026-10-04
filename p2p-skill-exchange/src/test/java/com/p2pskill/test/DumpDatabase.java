@@ -21,21 +21,15 @@ public class DumpDatabase {
                         rs.getString("department"),
                         rs.getInt("year_of_study"));
             }
-            rs.close();
-            
-            System.out.println("--- OFFERED SKILLS FOR STUDENT 1 ---");
-            rs = stmt.executeQuery("SELECT s.skill_id, s.skill_name FROM student_offered_skill sos JOIN skill s ON sos.skill_id = s.skill_id WHERE sos.student_id = 1");
-            while (rs.next()) {
-                System.out.printf("Offered: %d - %s%n", rs.getInt("skill_id"), rs.getString("skill_name"));
+            System.out.println("--- TABLE COUNTS ---");
+            String[] tables = {"student", "skill_category", "skill", "student_offered_skill", "student_wanted_skill", "skill_exchange_request", "`match`", "feedback"};
+            for (String tbl : tables) {
+                rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tbl);
+                if (rs.next()) {
+                    System.out.printf("%s: %d rows%n", tbl, rs.getInt(1));
+                }
+                rs.close();
             }
-            rs.close();
-
-            System.out.println("--- WANTED SKILLS FOR STUDENT 1 ---");
-            rs = stmt.executeQuery("SELECT s.skill_id, s.skill_name FROM student_wanted_skill sws JOIN skill s ON sws.skill_id = s.skill_id WHERE sws.student_id = 1");
-            while (rs.next()) {
-                System.out.printf("Wanted: %d - %s%n", rs.getInt("skill_id"), rs.getString("skill_name"));
-            }
-            rs.close();
             stmt.close();
         } catch (Exception e) {
             e.printStackTrace();
