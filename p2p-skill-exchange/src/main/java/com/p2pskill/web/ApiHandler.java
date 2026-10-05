@@ -212,11 +212,23 @@ public class ApiHandler implements HttpHandler {
         double avgRating = feedbackService.getAverageRating(peerId);
         boolean hasExisting = requestService.hasExistingRequest(currentUserId, peerId);
 
+        List<Match> myMatches = matchService.getMatchesForStudent(currentUserId);
+        Integer activeMatchId = null;
+        for (Match m : myMatches) {
+            if (m.getPeerId(currentUserId) == peerId && m.isActive()) {
+                activeMatchId = m.getMatchId();
+                break;
+            }
+        }
+        boolean hasActiveMatch = (activeMatchId != null);
+
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"peer\":").append(JsonUtil.studentToJson(peer)).append(",");
         sb.append("\"matchScore\":").append(score).append(",");
         sb.append("\"avgRating\":").append(String.format(Locale.US, "%.1f", avgRating)).append(",");
-        sb.append("\"hasExistingRequest\":").append(hasExisting).append(",");
+        sb.append("\"hasExistingRequest\":").append(hasExisting || hasActiveMatch).append(",");
+        sb.append("\"hasActiveMatch\":").append(hasActiveMatch).append(",");
+        sb.append("\"matchId\":").append(activeMatchId != null ? activeMatchId : "null").append(",");
 
         sb.append("\"offeredSkills\":[");
         for (int i = 0; i < offered.size(); i++) {

@@ -236,11 +236,11 @@
                 <!-- Incoming Proposal Action Banner (shown when reviewing an incoming proposal) -->
                 <div id="peerProfileProposalBanner" class="proposal-action-banner hidden">
                     <div class="proposal-banner-info">
-                        <div class="proposal-banner-chip">📬 Pending Exchange Proposal</div>
+                        <div id="peerProfileBannerChip" class="proposal-banner-chip">📬 Pending Exchange Proposal</div>
                         <h3 id="peerProfileProposalTitle">Proposal Review</h3>
                         <p id="peerProfileProposalMsg" class="proposal-banner-note"></p>
                     </div>
-                    <div class="proposal-banner-actions">
+                    <div id="peerProfileBannerActions" class="proposal-banner-actions">
                         <button class="btn btn-primary" onclick="app.respondFromProfile('ACCEPT')">✓ Accept Match</button>
                         <button class="btn btn-danger" onclick="app.respondFromProfile('REJECT')">✕ Decline</button>
                     </div>

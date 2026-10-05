@@ -468,6 +468,8 @@ const app = {
         const backBtn = document.getElementById('peerProfileBackBtn');
         if (context && context.fromProposal) {
             if (backBtn) backBtn.textContent = '← Back to Proposals';
+        } else if (context && context.fromMatches) {
+            if (backBtn) backBtn.textContent = '← Back to Matches';
         } else {
             if (backBtn) backBtn.textContent = '← Back to Peers';
         }
@@ -497,32 +499,107 @@ const app = {
                 `<span class="skill-tag skill-tag-wanted">🔸 ${s.skillName}</span>`
             ).join('') || '<span class="empty-state">None added</span>';
 
-            // Proposal banner vs Form box state
+            // Check active match / request status
+            const hasMatch = !!(data.hasActiveMatch || (context && context.status === 'ACCEPTED') ||
+                (data.incomingRequest && data.incomingRequest.status === 'ACCEPTED') ||
+                (data.outgoingRequest && data.outgoingRequest.status === 'ACCEPTED'));
+            const activeMatchId = data.matchId || (context && context.matchId);
+
+            const isIncomingPending = (context && context.fromProposal && context.status === 'PENDING') ||
+                (!hasMatch && data.incomingRequest && data.incomingRequest.status === 'PENDING');
+
+            const isRejected = (context && context.status === 'REJECTED') ||
+                (!hasMatch && data.incomingRequest && data.incomingRequest.status === 'REJECTED');
+
             const banner = document.getElementById('peerProfileProposalBanner');
+            const chipEl = document.getElementById('peerProfileBannerChip');
+            const titleEl = document.getElementById('peerProfileProposalTitle');
+            const msgEl = document.getElementById('peerProfileProposalMsg');
+            const actionsEl = document.getElementById('peerProfileBannerActions');
             const formBox = document.getElementById('peerProposalFormBox') || document.getElementById('proposalBox');
             const notice = document.getElementById('proposalNotice');
 
-            if (context && context.fromProposal) {
+            if (hasMatch) {
+                // Confirmed active partnership - replace proposal actions with direct Chat & Feedback
                 if (banner) {
+                    banner.className = 'proposal-action-banner banner-matched';
                     banner.classList.remove('hidden');
-                    const titleEl = document.getElementById('peerProfileProposalTitle');
-                    if (titleEl) titleEl.textContent = `Exchange Proposal from ${p.fullName}`;
-                    const msgEl = document.getElementById('peerProfileProposalMsg');
+                    if (chipEl) {
+                        chipEl.className = 'proposal-banner-chip chip-matched';
+                        chipEl.textContent = '🤝 Active Study Partnership';
+                    }
+                    if (titleEl) {
+                        titleEl.textContent = `Connected with ${p.fullName}`;
+                    }
                     if (msgEl) {
-                        msgEl.textContent = context.message
-                            ? `"${context.message}"`
-                            : 'Review their skills and past ratings above, then choose to accept or decline.';
+                        msgEl.textContent = 'You and this peer are confirmed skill exchange partners! Coordinate study sessions in live chat.';
+                    }
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">💬 Open Chat</button>
+                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">⭐ Leave Feedback</button>
+                        `;
                     }
                 }
                 if (formBox) formBox.classList.add('hidden');
+            } else if (isIncomingPending) {
+                // Pending incoming request awaiting response
+                if (banner) {
+                    banner.className = 'proposal-action-banner';
+                    banner.classList.remove('hidden');
+                    if (chipEl) {
+                        chipEl.className = 'proposal-banner-chip';
+                        chipEl.textContent = '📬 Pending Exchange Proposal';
+                    }
+                    if (titleEl) {
+                        titleEl.textContent = `Exchange Proposal from ${p.fullName}`;
+                    }
+                    const note = (context && context.message) || (data.incomingRequest && data.incomingRequest.message) || '';
+                    if (msgEl) {
+                        msgEl.textContent = note ? `"${note}"` : 'Review their skills and past ratings above, then choose to accept or decline.';
+                    }
+                    const reqId = (context && context.requestId) || (data.incomingRequest && data.incomingRequest.requestId);
+                    this.activeProfileContext = { fromProposal: true, requestId: reqId, peerId, message: note, status: 'PENDING' };
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <button class="btn btn-primary" onclick="app.respondFromProfile('ACCEPT')">✓ Accept Match</button>
+                            <button class="btn btn-danger" onclick="app.respondFromProfile('REJECT')">✕ Decline</button>
+                        `;
+                    }
+                }
+                if (formBox) formBox.classList.add('hidden');
+            } else if (isRejected) {
+                // Proposal was declined
+                if (banner) {
+                    banner.className = 'proposal-action-banner banner-rejected';
+                    banner.classList.remove('hidden');
+                    if (chipEl) {
+                        chipEl.className = 'proposal-banner-chip chip-rejected';
+                        chipEl.textContent = '✕ Proposal Declined';
+                    }
+                    if (titleEl) {
+                        titleEl.textContent = 'Exchange Proposal Declined';
+                    }
+                    if (msgEl) {
+                        msgEl.textContent = 'This skill exchange proposal has been declined.';
+                    }
+                    if (actionsEl) actionsEl.innerHTML = '';
+                }
+                if (formBox) formBox.classList.add('hidden');
             } else {
+                // Standard profile browse
                 if (banner) banner.classList.add('hidden');
                 if (formBox) {
                     formBox.classList.remove('hidden');
                     const formInner = document.getElementById('proposalFormBox');
                     if (data.hasExistingRequest) {
                         if (formInner) formInner.classList.add('hidden');
-                        if (notice) notice.classList.remove('hidden');
+                        if (notice) {
+                            notice.classList.remove('hidden');
+                            notice.textContent = (data.outgoingRequest && data.outgoingRequest.status === 'PENDING')
+                                ? 'You have already sent an exchange proposal to this student. Waiting for their response.'
+                                : 'An active exchange proposal already exists with this student.';
+                        }
                     } else {
                         if (formInner) formInner.classList.remove('hidden');
                         if (notice) notice.classList.add('hidden');
@@ -554,20 +631,79 @@ const app = {
     navigateBackFromProfile() {
         if (this.activeProfileContext && this.activeProfileContext.fromProposal) {
             this.showView('requests');
+        } else if (this.activeProfileContext && this.activeProfileContext.fromMatches) {
+            this.showView('matches');
         } else {
             this.showView('peers');
         }
     },
 
-    viewPeerProfileFromRequest(peerId, requestId, message) {
-        this.viewPeerProfile(peerId, { fromProposal: true, requestId, message });
+    viewPeerProfileFromRequest(peerId, requestId, message, status = 'PENDING') {
+        this.viewPeerProfile(peerId, { fromProposal: true, requestId, message, status });
     },
 
     async respondFromProfile(action) {
         if (!this.activeProfileContext || !this.activeProfileContext.requestId) return;
         const reqId = this.activeProfileContext.requestId;
+        const peerId = this.activePeerId;
         await this.respondRequest(reqId, action);
-        this.showView('requests');
+        if (action === 'ACCEPT') {
+            await this.viewPeerProfile(peerId, {
+                fromProposal: true,
+                requestId: reqId,
+                status: 'ACCEPTED'
+            });
+        } else {
+            this.showView('requests');
+        }
+    },
+
+    async openChatWithPeer(peerId, peerName, peerDept) {
+        try {
+            const matches = await this.api(`/api/matches?studentId=${this.currentUser.studentId}`);
+            const pid = Number(peerId);
+            const found = (Array.isArray(matches) ? matches : []).find(item => {
+                const m = item.match;
+                if (!m) return false;
+                const s1 = Number(m.studentId1 ?? (m.student1 ? m.student1.studentId : 0));
+                const s2 = Number(m.studentId2 ?? (m.student2 ? m.student2.studentId : 0));
+                return (s1 === pid || s2 === pid);
+            });
+            if (found && found.match && found.match.matchId) {
+                this.openChatModal(found.match.matchId, peerName, peerDept);
+            } else {
+                this.showToast('Opening study partnerships...', 'info');
+                await this.loadMatches();
+                this.showView('matches');
+            }
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        }
+    },
+
+    async openFeedbackForPeer(peerId, matchId) {
+        if (matchId && Number(matchId) > 0) {
+            this.openFeedbackModal(matchId);
+            return;
+        }
+        try {
+            const matches = await this.api(`/api/matches?studentId=${this.currentUser.studentId}`);
+            const pid = Number(peerId);
+            const found = (Array.isArray(matches) ? matches : []).find(item => {
+                const m = item.match;
+                if (!m) return false;
+                const s1 = Number(m.studentId1 ?? 0);
+                const s2 = Number(m.studentId2 ?? 0);
+                return (s1 === pid || s2 === pid);
+            });
+            if (found && found.match && found.match.matchId) {
+                this.openFeedbackModal(found.match.matchId);
+            } else {
+                this.showView('matches');
+            }
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        }
     },
 
     async sendProposal() {
@@ -699,16 +835,19 @@ const app = {
                 inBox.innerHTML = incoming.map(r => `
                     <div class="request-card">
                         <div class="request-card-info">
-                            <h3>Proposal from <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}')">${this.escapeHtml(r.senderName)}</a> (${this.escapeHtml(r.senderDept)})</h3>
+                            <h3>Proposal from <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}', '${r.status}')">${this.escapeHtml(r.senderName)}</a> (${this.escapeHtml(r.senderDept)})</h3>
                             <p class="text-muted" style="font-size:0.85rem">Received on: ${r.createdAt ? r.createdAt.substring(0, 10) : 'Recent'}</p>
                             ${r.message ? `<div class="request-card-msg">"${this.escapeHtml(r.message)}"</div>` : ''}
                         </div>
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}')">👁 View Profile</button>
+                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}', '${r.status}')">👁 View Profile</button>
                             ${r.status === 'PENDING' ? `
                                 <button class="btn btn-primary btn-sm" onclick="app.respondRequest(${r.requestId}, 'ACCEPT')">✓ Accept Match</button>
                                 <button class="btn btn-danger btn-sm" onclick="app.respondRequest(${r.requestId}, 'REJECT')">✕ Decline</button>
-                            ` : `<span class="badge ${r.status === 'ACCEPTED' ? 'badge-high' : 'badge-low'}">${r.status}</span>`}
+                            ` : r.status === 'ACCEPTED' ? `
+                                <span class="badge badge-high">ACCEPTED</span>
+                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.senderId}, '${this.escapeForJs(r.senderName)}', '${this.escapeForJs(r.senderDept)}')">💬 Chat</button>
+                            ` : `<span class="badge badge-low">${r.status}</span>`}
                         </div>
                     </div>
                 `).join('');
@@ -722,11 +861,17 @@ const app = {
                 outBox.innerHTML = outgoing.map(r => `
                     <div class="request-card">
                         <div class="request-card-info">
-                            <h3>Sent to ${r.receiverName} (${r.receiverDept})</h3>
+                            <h3>Sent to <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${r.receiverId})">${this.escapeHtml(r.receiverName)}</a> (${this.escapeHtml(r.receiverDept)})</h3>
                             <p class="text-muted" style="font-size:0.85rem">Sent on: ${r.createdAt ? r.createdAt.substring(0, 10) : 'Recent'}</p>
                             ${r.message ? `<div class="request-card-msg">"${r.message}"</div>` : ''}
                         </div>
-                        <span class="badge ${r.status === 'ACCEPTED' ? 'badge-high' : r.status === 'PENDING' ? 'badge-medium' : 'badge-low'}">${r.status}</span>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${r.receiverId})">👁 View Profile</button>
+                            <span class="badge ${r.status === 'ACCEPTED' ? 'badge-high' : r.status === 'PENDING' ? 'badge-medium' : 'badge-low'}">${r.status}</span>
+                            ${r.status === 'ACCEPTED' ? `
+                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.receiverId}, '${this.escapeForJs(r.receiverName)}', '${this.escapeForJs(r.receiverDept)}')">💬 Chat</button>
+                            ` : ''}
+                        </div>
                     </div>
                 `).join('');
             }
@@ -745,7 +890,8 @@ const app = {
                 matchScore: 85.0
             });
             this.showToast(action === 'ACCEPT' ? 'Proposal accepted! Partnership created.' : 'Proposal declined.');
-            this.loadRequests();
+            await this.loadRequests();
+            this.loadMatches();
         } catch (err) {
             this.showToast(err.message, 'error');
         }
@@ -767,6 +913,7 @@ const app = {
             box.innerHTML = data.map(item => {
                 const m = item.match;
                 const peer = m.studentId1 === this.currentUser.studentId ? m.student2 : m.student1;
+                const peerId = peer ? (peer.studentId || peer.id) : (m.studentId1 === this.currentUser.studentId ? m.studentId2 : m.studentId1);
                 const score = Math.round(m.matchScore);
                 const peerName = peer ? peer.fullName : 'Partner';
                 const peerDept = peer ? peer.department : '';
@@ -774,13 +921,14 @@ const app = {
                 return `
                     <div class="match-card">
                         <div>
-                            <h3>🤝 Exchange Partner: ${this.escapeHtml(peerName)}</h3>
+                            <h3>🤝 Exchange Partner: <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
                             <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)} • Email: ${this.escapeHtml(peer ? peer.email : '')}</p>
                             <p class="text-muted" style="font-size:0.82rem; margin-top:4px;">Matched: ${m.matchedAt ? m.matchedAt.substring(0, 10) : 'Active'}</p>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
                             <span class="badge badge-high">${score}% Match</span>
                             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">👁 Profile</button>
                                 <button class="btn btn-primary btn-sm" onclick="app.openChatModal(${m.matchId}, '${this.escapeForJs(peerName)}', '${this.escapeForJs(peerDept)}')">💬 Chat</button>
                                 ${item.reviewed ? `
                                     <span class="badge badge-low">✓ Review Submitted</span>
@@ -1447,14 +1595,15 @@ const FirestoreBackend = {
             const pid = parseInt(params.peerId);
             const myId = parseInt(params.currentUserId);
 
-            const [pDoc, myDoc, reqSnap, fbSnap] = await Promise.all([
+            const [pDoc, myDoc, outSnap1, outSnap2, inSnap1, inSnap2, m1Snap, m2Snap, fbSnap] = await Promise.all([
                 this.db.collection('students').doc(String(pid)).get(),
                 this.db.collection('students').doc(String(myId)).get(),
-                this.db.collection('requests')
-                    .where('fromId', '==', myId)
-                    .where('toId', '==', pid)
-                    .where('status', '==', 'PENDING')
-                    .get(),
+                this.db.collection('requests').where('fromId', '==', myId).get(),
+                this.db.collection('requests').where('senderId', '==', myId).get(),
+                this.db.collection('requests').where('toId', '==', myId).get(),
+                this.db.collection('requests').where('receiverId', '==', myId).get(),
+                this.db.collection('matches').where('studentId1', '==', myId).get(),
+                this.db.collection('matches').where('studentId2', '==', myId).get(),
                 this.db.collection('feedback').where('reviewedId', '==', pid).get()
             ]);
 
@@ -1481,11 +1630,55 @@ const FirestoreBackend = {
             });
             const avg = reviews.length ? (totalRating / reviews.length) : 0;
 
+            // Incoming requests from pid to myId
+            const inMap = new Map();
+            inSnap1.forEach(d => inMap.set(d.id, this.normalizeRequest(d.data())));
+            inSnap2.forEach(d => inMap.set(d.id, this.normalizeRequest(d.data())));
+            const incomingList = Array.from(inMap.values())
+                .filter(r => r.senderId === pid)
+                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const latestIncoming = incomingList[0] || null;
+
+            // Outgoing requests from myId to pid
+            const outMap = new Map();
+            outSnap1.forEach(d => outMap.set(d.id, this.normalizeRequest(d.data())));
+            outSnap2.forEach(d => outMap.set(d.id, this.normalizeRequest(d.data())));
+            const outgoingList = Array.from(outMap.values())
+                .filter(r => r.receiverId === pid)
+                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const latestOutgoing = outgoingList[0] || null;
+
+            // Check matches between myId and pid
+            const matchMap = new Map();
+            m1Snap.forEach(d => matchMap.set(d.id, d.data()));
+            m2Snap.forEach(d => matchMap.set(d.id, d.data()));
+            let activeMatch = null;
+            for (const m of matchMap.values()) {
+                const s1 = Number(m.studentId1 ?? m.fromId ?? 0);
+                const s2 = Number(m.studentId2 ?? m.toId ?? 0);
+                const hasIdsArray = Array.isArray(m.studentIds) && m.studentIds.map(Number).includes(myId) && m.studentIds.map(Number).includes(pid);
+                if (((s1 === myId && s2 === pid) || (s1 === pid && s2 === myId) || hasIdsArray) && m.isActive !== false) {
+                    activeMatch = m;
+                    break;
+                }
+            }
+
+            const hasAccepted = (latestIncoming && latestIncoming.status === 'ACCEPTED') || (latestOutgoing && latestOutgoing.status === 'ACCEPTED');
+            const hasActiveMatch = !!activeMatch || hasAccepted;
+            const matchId = activeMatch ? Number(activeMatch.matchId || activeMatch.id) : null;
+            const hasExistingRequest = hasActiveMatch ||
+                (latestOutgoing && latestOutgoing.status === 'PENDING') ||
+                (latestIncoming && latestIncoming.status === 'PENDING');
+
             return {
                 peer,
                 matchScore: score,
                 avgRating: avg,
-                hasExistingRequest: !reqSnap.empty,
+                hasActiveMatch,
+                matchId,
+                incomingRequest: latestIncoming ? { requestId: latestIncoming.requestId, status: latestIncoming.status, message: latestIncoming.message } : null,
+                outgoingRequest: latestOutgoing ? { requestId: latestOutgoing.requestId, status: latestOutgoing.status, message: latestOutgoing.message } : null,
+                hasExistingRequest,
                 offeredSkills: (peer ? peer.offered : []).map(x => this.skillToObject(x)).filter(Boolean),
                 wantedSkills: (peer ? peer.wanted : []).map(x => this.skillToObject(x)).filter(Boolean),
                 reviews
@@ -1871,12 +2064,28 @@ const MockBackend = {
 
             const reviews = state.feedback.filter(f => f.reviewedId === pid);
             const avg = reviews.length ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length) : 0;
-            const hasExisting = state.requests.some(r => r.senderId === myId && r.receiverId === pid && r.status === 'PENDING');
+
+            const activeMatch = state.matches.find(m =>
+                ((m.studentId1 === myId && m.studentId2 === pid) || (m.studentId1 === pid && m.studentId2 === myId)) && m.isActive !== false
+            );
+            const inReqs = state.requests.filter(r => r.senderId === pid && r.receiverId === myId).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const outReqs = state.requests.filter(r => r.senderId === myId && r.receiverId === pid).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const latestIn = inReqs[0] || null;
+            const latestOut = outReqs[0] || null;
+
+            const hasAccepted = (latestIn && latestIn.status === 'ACCEPTED') || (latestOut && latestOut.status === 'ACCEPTED');
+            const hasActiveMatch = !!activeMatch || hasAccepted;
+            const matchId = activeMatch ? activeMatch.matchId : null;
+            const hasExisting = hasActiveMatch || (latestOut && latestOut.status === 'PENDING') || (latestIn && latestIn.status === 'PENDING');
 
             return {
                 peer,
                 matchScore: score,
                 avgRating: avg,
+                hasActiveMatch,
+                matchId,
+                incomingRequest: latestIn ? { requestId: latestIn.requestId, status: latestIn.status, message: latestIn.message } : null,
+                outgoingRequest: latestOut ? { requestId: latestOut.requestId, status: latestOut.status, message: latestOut.message } : null,
                 hasExistingRequest: hasExisting,
                 offeredSkills: peerOffered.map(id => this.skills.find(s => s.skillId === id)).filter(Boolean),
                 wantedSkills: peerWanted.map(id => this.skills.find(s => s.skillId === id)).filter(Boolean),
