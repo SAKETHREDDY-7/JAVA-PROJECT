@@ -833,6 +833,7 @@ const app = {
     // ── Chat Modal & Real-Time Messaging ──────────────────────────
     activeChatMatchId: null,
     chatPollInterval: null,
+    unsubscribeChat: null,
     lastChatMessageCount: 0,
 
     openChatModal(matchId, partnerName, partnerDept) {
@@ -865,12 +866,40 @@ const app = {
 
         if (inputEl) setTimeout(() => inputEl.focus(), 150);
 
+        // 1. Initial load
         this.loadChatMessages(matchId, false);
+
+        // 2. Real-time Firestore subscription if in Firestore mode
+        if (typeof FirestoreBackend !== 'undefined' && FirestoreBackend.isAvailable() && FirestoreBackend.db) {
+            if (this.unsubscribeChat) {
+                this.unsubscribeChat();
+                this.unsubscribeChat = null;
+            }
+            try {
+                this.unsubscribeChat = FirestoreBackend.db.collection('messages')
+                    .where('matchId', '==', parseInt(matchId))
+                    .onSnapshot(snap => {
+                        if (this.activeChatMatchId !== matchId) return;
+                        const msgs = [];
+                        snap.forEach(d => msgs.push(d.data()));
+                        msgs.sort((a, b) => (a.sentAt || '').localeCompare(b.sentAt || ''));
+                        this.renderChatMessageList(msgs, true);
+                    }, () => {});
+            } catch (err) {
+                console.warn('Firestore chat listener notice:', err);
+            }
+        }
+
+        // 3. Polling fallback
         this.startChatPolling(matchId);
     },
 
     closeChatModal() {
         this.stopChatPolling();
+        if (this.unsubscribeChat) {
+            this.unsubscribeChat();
+            this.unsubscribeChat = null;
+        }
         const modal = document.getElementById('chatModal');
         if (modal) modal.classList.add('hidden');
         this.activeChatMatchId = null;
@@ -898,50 +927,58 @@ const app = {
         if (!feedEl) return;
 
         try {
-            const messages = await this.api(`/api/chat/messages?matchId=${matchId}&studentId=${this.currentUser.studentId}`);
-            
-            // If background polling and count hasn't changed, don't re-render DOM
-            if (isPoll && messages.length === this.lastChatMessageCount) {
-                return;
-            }
-            this.lastChatMessageCount = messages.length;
-
-            if (messages.length === 0) {
-                feedEl.innerHTML = `
-                    <div class="chat-empty-state">
-                        <div class="chat-empty-icon">💬</div>
-                        <h4>No messages yet</h4>
-                        <p class="text-muted">Say hello to coordinate your skill exchange session!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const currentUserId = Number(this.currentUser.studentId || this.currentUser.id);
-            const isNearBottom = (feedEl.scrollHeight - feedEl.scrollTop - feedEl.clientHeight) < 120;
-
-            feedEl.innerHTML = messages.map(msg => {
-                const isMine = Number(msg.senderId) === currentUserId;
-                const timeStr = this.formatChatTime(msg.sentAt);
-
-                return `
-                    <div class="chat-bubble-wrapper ${isMine ? 'mine' : 'theirs'}">
-                        ${!isMine ? `<span class="chat-bubble-sender">${this.escapeHtml(msg.senderName)}</span>` : ''}
-                        <div class="chat-bubble ${isMine ? 'mine' : 'theirs'}">${this.escapeHtml(msg.content)}</div>
-                        <span class="chat-bubble-time">${timeStr}</span>
-                    </div>
-                `;
-            }).join('');
-
-            // Scroll down on first load or if already near bottom
-            if (!isPoll || isNearBottom) {
-                feedEl.scrollTop = feedEl.scrollHeight;
-            }
-
+            const res = await this.api(`/api/chat/messages?matchId=${matchId}&studentId=${this.currentUser.studentId}`);
+            const messages = Array.isArray(res) ? res : (res && Array.isArray(res.messages) ? res.messages : []);
+            this.renderChatMessageList(messages, isPoll);
         } catch (err) {
             if (!isPoll) {
                 feedEl.innerHTML = `<p class="empty-state">Error loading conversation: ${this.escapeHtml(err.message)}</p>`;
             }
+        }
+    },
+
+    renderChatMessageList(messages, isUpdate = false) {
+        const feedEl = document.getElementById('chatMessageFeed');
+        if (!feedEl) return;
+
+        const msgList = Array.isArray(messages) ? messages : [];
+
+        // If polling/update and count hasn't changed, don't re-render DOM
+        if (isUpdate && msgList.length === this.lastChatMessageCount) {
+            return;
+        }
+        this.lastChatMessageCount = msgList.length;
+
+        if (msgList.length === 0) {
+            feedEl.innerHTML = `
+                <div class="chat-empty-state">
+                    <div class="chat-empty-icon">💬</div>
+                    <h4>No messages yet</h4>
+                    <p class="text-muted">Say hello to coordinate your skill exchange session!</p>
+                </div>
+            `;
+            return;
+        }
+
+        const currentUserId = Number(this.currentUser.studentId || this.currentUser.id);
+        const isNearBottom = (feedEl.scrollHeight - feedEl.scrollTop - feedEl.clientHeight) < 140;
+
+        feedEl.innerHTML = msgList.map(msg => {
+            const isMine = Number(msg.senderId) === currentUserId;
+            const timeStr = this.formatChatTime(msg.sentAt);
+
+            return `
+                <div class="chat-bubble-wrapper ${isMine ? 'mine' : 'theirs'}">
+                    ${!isMine ? `<span class="chat-bubble-sender">${this.escapeHtml(msg.senderName)}</span>` : ''}
+                    <div class="chat-bubble ${isMine ? 'mine' : 'theirs'}">${this.escapeHtml(msg.content)}</div>
+                    <span class="chat-bubble-time">${timeStr}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Scroll down on first load or if already near bottom
+        if (!isUpdate || isNearBottom) {
+            feedEl.scrollTop = feedEl.scrollHeight;
         }
     },
 
@@ -1619,6 +1656,35 @@ const FirestoreBackend = {
             return { success: true, student: this.normalizeStudent(updated.data()) };
         }
 
+        if (path === '/api/chat/messages') {
+            const mid = parseInt(params.matchId);
+            const snap = await this.db.collection('messages')
+                .where('matchId', '==', mid)
+                .get();
+            const list = [];
+            snap.forEach(d => list.push(d.data()));
+            list.sort((a, b) => (a.sentAt || '').localeCompare(b.sentAt || ''));
+            return list;
+        }
+
+        if (path === '/api/chat/send') {
+            const sid = Number(data.senderId);
+            const senderDoc = await this.db.collection('students').doc(String(sid)).get();
+            const sender = senderDoc.exists ? this.normalizeStudent(senderDoc.data()) : {};
+            const msgId = Date.now();
+            const msgObj = {
+                messageId: msgId,
+                matchId: parseInt(data.matchId),
+                senderId: sid,
+                senderName: sender.fullName || 'Student',
+                content: data.content,
+                sentAt: new Date().toISOString(),
+                isRead: false
+            };
+            await this.db.collection('messages').doc(String(msgId)).set(msgObj);
+            return { success: true, message: msgObj };
+        }
+
         return { success: true };
     }
 };
@@ -1913,6 +1979,32 @@ const MockBackend = {
                 this.saveState(state);
             }
             return { success: true, student: stu };
+        }
+
+        if (path === '/api/chat/messages') {
+            const mid = parseInt(params.matchId);
+            if (!state.messages) state.messages = [];
+            return state.messages
+                .filter(m => Number(m.matchId) === mid)
+                .sort((a, b) => (a.sentAt || '').localeCompare(b.sentAt || ''));
+        }
+
+        if (path === '/api/chat/send') {
+            if (!state.messages) state.messages = [];
+            const sid = Number(data.senderId);
+            const sender = state.students.find(s => Number(s.studentId) === sid);
+            const msgObj = {
+                messageId: Date.now(),
+                matchId: parseInt(data.matchId),
+                senderId: sid,
+                senderName: sender ? sender.fullName : 'Student',
+                content: data.content,
+                sentAt: new Date().toISOString(),
+                isRead: false
+            };
+            state.messages.push(msgObj);
+            this.saveState(state);
+            return { success: true, message: msgObj };
         }
 
         return { success: true };
