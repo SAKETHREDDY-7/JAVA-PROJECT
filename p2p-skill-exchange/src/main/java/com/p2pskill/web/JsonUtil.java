@@ -170,4 +170,19 @@ public class JsonUtil {
             f.getCreatedAt() != null ? f.getCreatedAt().toString() : ""
         );
     }
+
+    public static String chatMessageToJson(ChatMessage c) {
+        if (c == null) return "null";
+        return String.format(
+            Locale.US,
+            "{\"messageId\":%d,\"matchId\":%d,\"senderId\":%d,\"senderName\":\"%s\",\"content\":\"%s\",\"sentAt\":\"%s\",\"isRead\":%b}",
+            c.getMessageId(),
+            c.getMatchId(),
+            c.getSenderId(),
+            escape(c.getSenderName() != null ? c.getSenderName() : "Student"),
+            escape(c.getContent() != null ? c.getContent() : ""),
+            c.getSentAt() != null ? c.getSentAt().toString() : "",
+            c.isRead()
+        );
+    }
 }

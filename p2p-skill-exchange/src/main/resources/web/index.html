@@ -46,11 +46,8 @@
         <section id="view-auth" class="view active">
             <div class="auth-hero">
                 <div class="auth-badge">🎓 College Peer-to-Peer Platform</div>
-                <h1>Skill Exchange System</h1>
+                <h1>Skill Sync</h1>
                 <p>Connect with campus peers, trade skills, and learn together.</p>
-                <div style="margin-top: 8px;">
-                    <span id="authServerStatus" class="badge-server-live" style="display:inline-block; font-size: 0.78rem; padding: 3px 10px; border-radius: 12px;">🟢 Ready (VS Code Live Server Compatible)</span>
-                </div>
             </div>
 
             <div class="auth-card">
@@ -223,7 +220,7 @@
 
         <!-- ════════════════════ VIEW: PEER PROFILE ════════════════════ -->
         <section id="view-peer-profile" class="view hidden">
-            <button class="btn btn-sm btn-outline mb-4" onclick="app.showView('peers')">← Back to Peers</button>
+            <button id="peerProfileBackBtn" class="btn btn-sm btn-outline mb-4" onclick="app.navigateBackFromProfile()">← Back to Peers</button>
 
             <div class="profile-card">
                 <div class="profile-header">
@@ -233,6 +230,19 @@
                         <p id="peerDetailMeta" class="profile-meta">Department • Year</p>
                         <div id="peerDetailScoreBadge" class="badge badge-high mt-2">100% Match</div>
                         <div id="peerDetailRating" class="profile-rating mt-2">⭐ 5.0 (0 reviews)</div>
+                    </div>
+                </div>
+
+                <!-- Incoming Proposal Action Banner (shown when reviewing an incoming proposal) -->
+                <div id="peerProfileProposalBanner" class="proposal-action-banner hidden">
+                    <div class="proposal-banner-info">
+                        <div class="proposal-banner-chip">📬 Pending Exchange Proposal</div>
+                        <h3 id="peerProfileProposalTitle">Proposal Review</h3>
+                        <p id="peerProfileProposalMsg" class="proposal-banner-note"></p>
+                    </div>
+                    <div class="proposal-banner-actions">
+                        <button class="btn btn-primary" onclick="app.respondFromProfile('ACCEPT')">✓ Accept Match</button>
+                        <button class="btn btn-danger" onclick="app.respondFromProfile('REJECT')">✕ Decline</button>
                     </div>
                 </div>
 
@@ -253,7 +263,7 @@
                 </div>
 
                 <!-- Exchange Proposal Form -->
-                <div class="proposal-box">
+                <div id="peerProposalFormBox" class="proposal-box">
                     <h3>Send Skill Exchange Proposal</h3>
                     <div id="proposalFormBox">
                         <textarea id="proposalMessage" rows="3" placeholder="Hi! I saw you know Java and want to learn Python. Let's exchange skills!"></textarea>
@@ -447,6 +457,45 @@
                     <button type="button" class="btn btn-secondary" onclick="app.closeFeedbackModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Submit Review</button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ════════════════════ MODAL: STUDY PARTNER CHAT ════════════════════ -->
+    <div id="chatModal" class="modal hidden">
+        <div class="modal-content chat-modal-dialog">
+            <div class="chat-modal-header">
+                <div class="chat-header-user">
+                    <div class="chat-avatar" id="chatPartnerAvatar">SP</div>
+                    <div class="chat-user-details">
+                        <div class="chat-user-name-row">
+                            <h2 id="chatPartnerName">Study Partner</h2>
+                            <span class="chat-active-indicator" title="Active Match"></span>
+                        </div>
+                        <p id="chatPartnerSubtitle" class="chat-user-sub">Skill Exchange Partner</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="app.closeChatModal()" title="Close Chat">✕</button>
+            </div>
+
+            <div id="chatMessageFeed" class="chat-feed">
+                <!-- Message thread dynamically rendered here -->
+                <div class="chat-empty-state">
+                    <div class="chat-empty-icon">💬</div>
+                    <h4>No messages yet</h4>
+                    <p class="text-muted">Say hello to coordinate your skill exchange session!</p>
+                </div>
+            </div>
+
+            <form class="chat-input-bar" onsubmit="app.handleSendChatMessage(event)">
+                <input type="text" id="chatInputField" placeholder="Write a message... (Press Enter to send)" autocomplete="off" maxlength="2000" required>
+                <button type="submit" id="chatSendBtn" class="btn btn-primary chat-submit-btn">
+                    <span>Send</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
             </form>
         </div>
     </div>

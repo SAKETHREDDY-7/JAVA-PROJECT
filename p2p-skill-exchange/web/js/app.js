@@ -179,8 +179,32 @@ const app = {
         setTimeout(() => toast.classList.add('hidden'), 3500);
     },
 
+    escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    escapeForJs(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, ' ')
+            .replace(/\r/g, '');
+    },
+
     // ── View Switching ────────────────────────────────────────────
     showView(viewName) {
+        if (this.activeChatMatchId) {
+            this.closeChatModal();
+        }
+
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
         const target = document.getElementById(`view-${viewName}`);
         if (target) target.classList.remove('hidden');
@@ -433,9 +457,20 @@ const app = {
     },
 
     // ── Peer Profile ──────────────────────────────────────────────
-    async viewPeerProfile(peerId) {
+    activePeerId: null,
+    activeProfileContext: null,
+
+    async viewPeerProfile(peerId, context = null) {
         this.activePeerId = peerId;
+        this.activeProfileContext = context;
         this.showView('peer-profile');
+
+        const backBtn = document.getElementById('peerProfileBackBtn');
+        if (context && context.fromProposal) {
+            if (backBtn) backBtn.textContent = '← Back to Proposals';
+        } else {
+            if (backBtn) backBtn.textContent = '← Back to Peers';
+        }
 
         try {
             const data = await this.api(`/api/peers/profile?peerId=${peerId}&currentUserId=${this.currentUser.studentId}`);
@@ -462,16 +497,39 @@ const app = {
                 `<span class="skill-tag skill-tag-wanted">🔸 ${s.skillName}</span>`
             ).join('') || '<span class="empty-state">None added</span>';
 
-            // Proposal box state
-            const formBox = document.getElementById('proposalFormBox');
+            // Proposal banner vs Form box state
+            const banner = document.getElementById('peerProfileProposalBanner');
+            const formBox = document.getElementById('peerProposalFormBox') || document.getElementById('proposalBox');
             const notice = document.getElementById('proposalNotice');
-            if (data.hasExistingRequest) {
-                formBox.classList.add('hidden');
-                notice.classList.remove('hidden');
+
+            if (context && context.fromProposal) {
+                if (banner) {
+                    banner.classList.remove('hidden');
+                    const titleEl = document.getElementById('peerProfileProposalTitle');
+                    if (titleEl) titleEl.textContent = `Exchange Proposal from ${p.fullName}`;
+                    const msgEl = document.getElementById('peerProfileProposalMsg');
+                    if (msgEl) {
+                        msgEl.textContent = context.message
+                            ? `"${context.message}"`
+                            : 'Review their skills and past ratings above, then choose to accept or decline.';
+                    }
+                }
+                if (formBox) formBox.classList.add('hidden');
             } else {
-                formBox.classList.remove('hidden');
-                notice.classList.add('hidden');
-                document.getElementById('proposalMessage').value = '';
+                if (banner) banner.classList.add('hidden');
+                if (formBox) {
+                    formBox.classList.remove('hidden');
+                    const formInner = document.getElementById('proposalFormBox');
+                    if (data.hasExistingRequest) {
+                        if (formInner) formInner.classList.add('hidden');
+                        if (notice) notice.classList.remove('hidden');
+                    } else {
+                        if (formInner) formInner.classList.remove('hidden');
+                        if (notice) notice.classList.add('hidden');
+                        const pMsg = document.getElementById('proposalMessage');
+                        if (pMsg) pMsg.value = '';
+                    }
+                }
             }
 
             // Reviews
@@ -491,6 +549,25 @@ const app = {
         } catch (err) {
             this.showToast(err.message, 'error');
         }
+    },
+
+    navigateBackFromProfile() {
+        if (this.activeProfileContext && this.activeProfileContext.fromProposal) {
+            this.showView('requests');
+        } else {
+            this.showView('peers');
+        }
+    },
+
+    viewPeerProfileFromRequest(peerId, requestId, message) {
+        this.viewPeerProfile(peerId, { fromProposal: true, requestId, message });
+    },
+
+    async respondFromProfile(action) {
+        if (!this.activeProfileContext || !this.activeProfileContext.requestId) return;
+        const reqId = this.activeProfileContext.requestId;
+        await this.respondRequest(reqId, action);
+        this.showView('requests');
     },
 
     async sendProposal() {
@@ -622,11 +699,12 @@ const app = {
                 inBox.innerHTML = incoming.map(r => `
                     <div class="request-card">
                         <div class="request-card-info">
-                            <h3>Proposal from ${r.senderName} (${r.senderDept})</h3>
+                            <h3>Proposal from <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}')">${this.escapeHtml(r.senderName)}</a> (${this.escapeHtml(r.senderDept)})</h3>
                             <p class="text-muted" style="font-size:0.85rem">Received on: ${r.createdAt ? r.createdAt.substring(0, 10) : 'Recent'}</p>
-                            ${r.message ? `<div class="request-card-msg">"${r.message}"</div>` : ''}
+                            ${r.message ? `<div class="request-card-msg">"${this.escapeHtml(r.message)}"</div>` : ''}
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}')">👁 View Profile</button>
                             ${r.status === 'PENDING' ? `
                                 <button class="btn btn-primary btn-sm" onclick="app.respondRequest(${r.requestId}, 'ACCEPT')">✓ Accept Match</button>
                                 <button class="btn btn-danger btn-sm" onclick="app.respondRequest(${r.requestId}, 'REJECT')">✕ Decline</button>
@@ -690,21 +768,26 @@ const app = {
                 const m = item.match;
                 const peer = m.studentId1 === this.currentUser.studentId ? m.student2 : m.student1;
                 const score = Math.round(m.matchScore);
+                const peerName = peer ? peer.fullName : 'Partner';
+                const peerDept = peer ? peer.department : '';
 
                 return `
                     <div class="match-card">
                         <div>
-                            <h3>🤝 Exchange Partner: ${peer ? peer.fullName : 'Partner'}</h3>
-                            <p class="text-muted" style="font-size:0.88rem">${peer ? peer.department : ''} • Email: ${peer ? peer.email : ''}</p>
+                            <h3>🤝 Exchange Partner: ${this.escapeHtml(peerName)}</h3>
+                            <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)} • Email: ${this.escapeHtml(peer ? peer.email : '')}</p>
                             <p class="text-muted" style="font-size:0.82rem; margin-top:4px;">Matched: ${m.matchedAt ? m.matchedAt.substring(0, 10) : 'Active'}</p>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
                             <span class="badge badge-high">${score}% Match</span>
-                            ${item.reviewed ? `
-                                <span class="badge badge-low">✓ Review Submitted</span>
-                            ` : `
-                                <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">⭐ Leave Feedback</button>
-                            `}
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button class="btn btn-primary btn-sm" onclick="app.openChatModal(${m.matchId}, '${this.escapeForJs(peerName)}', '${this.escapeForJs(peerDept)}')">💬 Chat</button>
+                                ${item.reviewed ? `
+                                    <span class="badge badge-low">✓ Review Submitted</span>
+                                ` : `
+                                    <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">⭐ Leave Feedback</button>
+                                `}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -744,6 +827,163 @@ const app = {
             this.loadMatches();
         } catch (err) {
             this.showToast(err.message, 'error');
+        }
+    },
+
+    // ── Chat Modal & Real-Time Messaging ──────────────────────────
+    activeChatMatchId: null,
+    chatPollInterval: null,
+    lastChatMessageCount: 0,
+
+    openChatModal(matchId, partnerName, partnerDept) {
+        this.activeChatMatchId = matchId;
+        this.lastChatMessageCount = 0;
+
+        const nameEl = document.getElementById('chatPartnerName');
+        const subEl = document.getElementById('chatPartnerSubtitle');
+        const avatarEl = document.getElementById('chatPartnerAvatar');
+        const inputEl = document.getElementById('chatInputField');
+        const feedEl = document.getElementById('chatMessageFeed');
+
+        if (nameEl) nameEl.textContent = partnerName || 'Study Partner';
+        if (subEl) subEl.textContent = partnerDept ? `${partnerDept} • Active Match` : 'Skill Exchange Partner';
+        if (avatarEl) {
+            const clean = (partnerName || 'SP').trim();
+            const words = clean.split(/\s+/);
+            const initials = (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
+            avatarEl.textContent = initials || 'SP';
+        }
+        if (feedEl) {
+            feedEl.innerHTML = '<div class="chat-empty-state"><p class="text-muted">Loading messages...</p></div>';
+        }
+        if (inputEl) {
+            inputEl.value = '';
+        }
+
+        const modal = document.getElementById('chatModal');
+        if (modal) modal.classList.remove('hidden');
+
+        if (inputEl) setTimeout(() => inputEl.focus(), 150);
+
+        this.loadChatMessages(matchId, false);
+        this.startChatPolling(matchId);
+    },
+
+    closeChatModal() {
+        this.stopChatPolling();
+        const modal = document.getElementById('chatModal');
+        if (modal) modal.classList.add('hidden');
+        this.activeChatMatchId = null;
+    },
+
+    startChatPolling(matchId) {
+        this.stopChatPolling();
+        this.chatPollInterval = setInterval(() => {
+            if (this.activeChatMatchId === matchId) {
+                this.loadChatMessages(matchId, true);
+            }
+        }, 3000);
+    },
+
+    stopChatPolling() {
+        if (this.chatPollInterval) {
+            clearInterval(this.chatPollInterval);
+            this.chatPollInterval = null;
+        }
+    },
+
+    async loadChatMessages(matchId, isPoll = false) {
+        if (!this.currentUser || !this.activeChatMatchId) return;
+        const feedEl = document.getElementById('chatMessageFeed');
+        if (!feedEl) return;
+
+        try {
+            const messages = await this.api(`/api/chat/messages?matchId=${matchId}&studentId=${this.currentUser.studentId}`);
+            
+            // If background polling and count hasn't changed, don't re-render DOM
+            if (isPoll && messages.length === this.lastChatMessageCount) {
+                return;
+            }
+            this.lastChatMessageCount = messages.length;
+
+            if (messages.length === 0) {
+                feedEl.innerHTML = `
+                    <div class="chat-empty-state">
+                        <div class="chat-empty-icon">💬</div>
+                        <h4>No messages yet</h4>
+                        <p class="text-muted">Say hello to coordinate your skill exchange session!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const currentUserId = Number(this.currentUser.studentId || this.currentUser.id);
+            const isNearBottom = (feedEl.scrollHeight - feedEl.scrollTop - feedEl.clientHeight) < 120;
+
+            feedEl.innerHTML = messages.map(msg => {
+                const isMine = Number(msg.senderId) === currentUserId;
+                const timeStr = this.formatChatTime(msg.sentAt);
+
+                return `
+                    <div class="chat-bubble-wrapper ${isMine ? 'mine' : 'theirs'}">
+                        ${!isMine ? `<span class="chat-bubble-sender">${this.escapeHtml(msg.senderName)}</span>` : ''}
+                        <div class="chat-bubble ${isMine ? 'mine' : 'theirs'}">${this.escapeHtml(msg.content)}</div>
+                        <span class="chat-bubble-time">${timeStr}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll down on first load or if already near bottom
+            if (!isPoll || isNearBottom) {
+                feedEl.scrollTop = feedEl.scrollHeight;
+            }
+
+        } catch (err) {
+            if (!isPoll) {
+                feedEl.innerHTML = `<p class="empty-state">Error loading conversation: ${this.escapeHtml(err.message)}</p>`;
+            }
+        }
+    },
+
+    async handleSendChatMessage(e) {
+        if (e) e.preventDefault();
+        if (!this.currentUser || !this.activeChatMatchId) return;
+
+        const inputEl = document.getElementById('chatInputField');
+        const sendBtn = document.getElementById('chatSendBtn');
+        const content = inputEl ? inputEl.value.trim() : '';
+
+        if (!content) return;
+
+        try {
+            if (sendBtn) sendBtn.disabled = true;
+            inputEl.value = '';
+
+            await this.api('/api/chat/send', 'POST', {
+                matchId: this.activeChatMatchId,
+                senderId: this.currentUser.studentId,
+                content: content
+            });
+
+            await this.loadChatMessages(this.activeChatMatchId, false);
+            if (inputEl) inputEl.focus();
+
+        } catch (err) {
+            this.showToast(err.message, 'error');
+            if (inputEl) inputEl.value = content;
+        } finally {
+            if (sendBtn) sendBtn.disabled = false;
+        }
+    },
+
+    formatChatTime(dateTimeStr) {
+        if (!dateTimeStr) return '';
+        try {
+            const date = new Date(dateTimeStr);
+            if (isNaN(date.getTime())) return dateTimeStr.substring(11, 16);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return '';
         }
     },
 

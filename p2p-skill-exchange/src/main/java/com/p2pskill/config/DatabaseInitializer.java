@@ -25,6 +25,8 @@ public class DatabaseInitializer {
             createSchema(conn, isEmbedded);
             populateSampleData(conn);
             System.out.println("[DB-Init] Database initialization complete! System ready.");
+        } else {
+            ensureChatTableExists(conn);
         }
     }
 
@@ -130,6 +132,18 @@ public class DatabaseInitializer {
                 CONSTRAINT fk_fb_reviewer FOREIGN KEY (reviewer_id) REFERENCES student(student_id) ON DELETE CASCADE,
                 CONSTRAINT fk_fb_reviewed FOREIGN KEY (reviewed_id) REFERENCES student(student_id) ON DELETE CASCADE
             );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS chat_message (
+                message_id   INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                match_id     INT NOT NULL,
+                sender_id    INT NOT NULL,
+                content      TEXT NOT NULL,
+                sent_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_read      TINYINT DEFAULT 0,
+                CONSTRAINT fk_chat_match FOREIGN KEY (match_id) REFERENCES `match`(match_id) ON DELETE CASCADE,
+                CONSTRAINT fk_chat_sender FOREIGN KEY (sender_id) REFERENCES student(student_id) ON DELETE CASCADE
+            );
             """
         };
 
@@ -139,6 +153,26 @@ public class DatabaseInitializer {
             }
         } catch (SQLException e) {
             System.err.println("[DB-Init] Error executing DDL: " + e.getMessage());
+        }
+    }
+
+    private static void ensureChatTableExists(Connection conn) {
+        String chatDdl = """
+            CREATE TABLE IF NOT EXISTS chat_message (
+                message_id   INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                match_id     INT NOT NULL,
+                sender_id    INT NOT NULL,
+                content      TEXT NOT NULL,
+                sent_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_read      TINYINT DEFAULT 0,
+                CONSTRAINT fk_chat_match FOREIGN KEY (match_id) REFERENCES `match`(match_id) ON DELETE CASCADE,
+                CONSTRAINT fk_chat_sender FOREIGN KEY (sender_id) REFERENCES student(student_id) ON DELETE CASCADE
+            );
+        """;
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(chatDdl);
+        } catch (SQLException e) {
+            System.err.println("[DB-Init] Error verifying chat_message table: " + e.getMessage());
         }
     }
 

@@ -24,6 +24,7 @@ public class ApiHandler implements HttpHandler {
     private final MatchService matchService = new MatchService();
     private final FeedbackService feedbackService = new FeedbackService();
     private final MatchingService matchingService = new MatchingService();
+    private final ChatService chatService = new ChatService();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -67,6 +68,10 @@ public class ApiHandler implements HttpHandler {
                 handleRespondRequest(exchange);
             } else if (path.startsWith("/api/matches") && "GET".equalsIgnoreCase(method)) {
                 handleMatches(exchange);
+            } else if (path.startsWith("/api/chat/messages") && "GET".equalsIgnoreCase(method)) {
+                handleChatMessages(exchange);
+            } else if (path.startsWith("/api/chat/send") && "POST".equalsIgnoreCase(method)) {
+                handleSendChatMessage(exchange);
             } else if (path.startsWith("/api/feedback/submit") && "POST".equalsIgnoreCase(method)) {
                 handleSubmitFeedback(exchange);
             } else if (path.startsWith("/api/feedback/student") && "GET".equalsIgnoreCase(method)) {
@@ -302,6 +307,32 @@ public class ApiHandler implements HttpHandler {
         }
         sb.append("]");
         sendResponse(exchange, 200, sb.toString());
+    }
+
+    private void handleChatMessages(HttpExchange exchange) throws IOException {
+        Map<String, String> params = parseQueryParams(exchange);
+        int matchId = Integer.parseInt(params.getOrDefault("matchId", "0"));
+        int studentId = Integer.parseInt(params.getOrDefault("studentId", "0"));
+
+        List<ChatMessage> messages = chatService.getMessages(matchId, studentId);
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < messages.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(JsonUtil.chatMessageToJson(messages.get(i)));
+        }
+        sb.append("]");
+        sendResponse(exchange, 200, sb.toString());
+    }
+
+    private void handleSendChatMessage(HttpExchange exchange) throws IOException {
+        Map<String, String> data = JsonUtil.parseJsonObject(readBody(exchange));
+        int matchId = Integer.parseInt(data.get("matchId"));
+        int senderId = Integer.parseInt(data.get("senderId"));
+        String content = data.get("content");
+
+        ChatMessage saved = chatService.sendMessage(matchId, senderId, content);
+        String json = "{\"success\":true,\"message\":" + JsonUtil.chatMessageToJson(saved) + "}";
+        sendResponse(exchange, 200, json);
     }
 
     private void handleSubmitFeedback(HttpExchange exchange) throws IOException {
