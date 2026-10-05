@@ -206,7 +206,28 @@ CREATE TABLE feedback (
                                        ON UPDATE CASCADE
 );
 
--- ── 9. INDEXES (performance) ───────────────────────────────
+-- ── 9. CHAT_MESSAGE ────────────────────────────────────────
+-- Direct messaging between matched students in an active partnership.
+CREATE TABLE chat_message (
+    message_id   INT          NOT NULL AUTO_INCREMENT,
+    match_id     INT          NOT NULL,
+    sender_id    INT          NOT NULL,
+    content      TEXT         NOT NULL,
+    sent_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_read      TINYINT(1)   NOT NULL DEFAULT 0,
+
+    CONSTRAINT pk_chat_message   PRIMARY KEY (message_id),
+    CONSTRAINT fk_chat_match     FOREIGN KEY (match_id)
+                                     REFERENCES `match`(match_id)
+                                     ON DELETE CASCADE
+                                     ON UPDATE CASCADE,
+    CONSTRAINT fk_chat_sender    FOREIGN KEY (sender_id)
+                                     REFERENCES student(student_id)
+                                     ON DELETE CASCADE
+                                     ON UPDATE CASCADE
+);
+
+-- ── 10. INDEXES (performance) ──────────────────────────────
 
 -- Fast lookup of all skills for a student
 CREATE INDEX idx_offered_student ON student_offered_skill(student_id);
@@ -223,6 +244,9 @@ CREATE INDEX idx_match_stu2   ON `match`(student_id_2);
 
 -- Fast feedback lookup
 CREATE INDEX idx_fb_reviewed  ON feedback(reviewed_id);
+
+-- Fast chat lookup by match and time
+CREATE INDEX idx_chat_match   ON chat_message(match_id, sent_at);
 
 -- ── 10. SUMMARY VIEW (optional, useful for dashboard) ──────
 CREATE OR REPLACE VIEW v_student_summary AS

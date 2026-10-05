@@ -34,6 +34,19 @@ public class MatchService {
         return matchDAO.findActiveMatchesByStudent(studentId);
     }
 
+    public List<Match> getAllMatchesForStudent(int studentId) {
+        return matchDAO.findAllMatchesByStudent(studentId);
+    }
+
+    public boolean completeMatch(int matchId, int studentId) {
+        Match match = matchDAO.findById(matchId)
+            .orElseThrow(() -> new IllegalArgumentException("Match not found."));
+        if (match.getStudentId1() != studentId && match.getStudentId2() != studentId) {
+            throw new IllegalArgumentException("You are not a participant in this match.");
+        }
+        return matchDAO.completeMatch(matchId);
+    }
+
     public int getActiveMatchCount() {
         return getActiveMatchCount(SessionManager.getInstance().getCurrentUserId());
     }
