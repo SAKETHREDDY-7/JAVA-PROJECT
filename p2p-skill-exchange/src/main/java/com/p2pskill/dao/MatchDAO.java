@@ -104,6 +104,45 @@ public class MatchDAO {
         return 0;
     }
 
+    public List<Match> findAllMatchesByStudent(int studentId) {
+        String sql = """
+            SELECT m.*,
+                   s1.full_name AS s1_name, s1.email AS s1_email, s1.department AS s1_dept, s1.year_of_study AS s1_year,
+                   s2.full_name AS s2_name, s2.email AS s2_email, s2.department AS s2_dept, s2.year_of_study AS s2_year
+            FROM `match` m
+            JOIN student s1 ON s1.student_id = m.student_id_1
+            JOIN student s2 ON s2.student_id = m.student_id_2
+            WHERE (m.student_id_1 = ? OR m.student_id_2 = ?)
+            ORDER BY m.matched_at DESC
+            """;
+        List<Match> list = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(buildMatchWithStudents(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error loading all matches: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public boolean completeMatch(int matchId) {
+        String sql = "UPDATE `match` SET is_active = 0 WHERE match_id = ?";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, matchId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error completing match: " + e.getMessage());
+        }
+        return false;
+    }
+
     private Match buildMatchWithStudents(ResultSet rs) throws SQLException {
         Match m = new Match();
         m.setMatchId(rs.getInt("match_id"));

@@ -66,6 +66,8 @@ public class ApiHandler implements HttpHandler {
                 handleOutgoingRequests(exchange);
             } else if (path.startsWith("/api/requests/respond") && "POST".equalsIgnoreCase(method)) {
                 handleRespondRequest(exchange);
+            } else if (path.startsWith("/api/matches/complete") && "POST".equalsIgnoreCase(method)) {
+                handleCompleteMatch(exchange);
             } else if (path.startsWith("/api/matches") && "GET".equalsIgnoreCase(method)) {
                 handleMatches(exchange);
             } else if (path.startsWith("/api/chat/messages") && "GET".equalsIgnoreCase(method)) {
@@ -308,7 +310,7 @@ public class ApiHandler implements HttpHandler {
         Map<String, String> params = parseQueryParams(exchange);
         int studentId = Integer.parseInt(params.getOrDefault("studentId", "0"));
 
-        List<Match> matches = matchService.getMatchesForStudent(studentId);
+        List<Match> matches = matchService.getAllMatchesForStudent(studentId);
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < matches.size(); i++) {
             if (i > 0) sb.append(",");
@@ -319,6 +321,19 @@ public class ApiHandler implements HttpHandler {
         }
         sb.append("]");
         sendResponse(exchange, 200, sb.toString());
+    }
+
+    private void handleCompleteMatch(HttpExchange exchange) throws IOException {
+        Map<String, String> data = JsonUtil.parseJsonObject(readBody(exchange));
+        int matchId = Integer.parseInt(data.get("matchId"));
+        int studentId = Integer.parseInt(data.get("studentId"));
+
+        boolean success = matchService.completeMatch(matchId, studentId);
+        if (success) {
+            sendResponse(exchange, 200, JsonUtil.successResponse("Skill exchange marked as completed!"));
+        } else {
+            sendResponse(exchange, 400, JsonUtil.errorResponse("Failed to complete skill exchange."));
+        }
     }
 
     private void handleChatMessages(HttpExchange exchange) throws IOException {
@@ -355,6 +370,13 @@ public class ApiHandler implements HttpHandler {
         String comment = data.get("comment");
 
         feedbackService.submitFeedback(matchId, reviewerId, rating, comment);
+
+        if ("true".equalsIgnoreCase(data.get("markCompleted"))) {
+            try {
+                matchService.completeMatch(matchId, reviewerId);
+            } catch (Exception ignored) {}
+        }
+
         sendResponse(exchange, 200, JsonUtil.successResponse("Rating and review submitted successfully!"));
     }
 

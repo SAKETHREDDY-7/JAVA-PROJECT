@@ -503,13 +503,14 @@ const app = {
             const hasMatch = !!(data.hasActiveMatch || (context && context.status === 'ACCEPTED') ||
                 (data.incomingRequest && data.incomingRequest.status === 'ACCEPTED') ||
                 (data.outgoingRequest && data.outgoingRequest.status === 'ACCEPTED'));
+            const hasCompletedMatch = !hasMatch && !!data.hasCompletedMatch;
             const activeMatchId = data.matchId || (context && context.matchId);
 
             const isIncomingPending = (context && context.fromProposal && context.status === 'PENDING') ||
-                (!hasMatch && data.incomingRequest && data.incomingRequest.status === 'PENDING');
+                (!hasMatch && !hasCompletedMatch && data.incomingRequest && data.incomingRequest.status === 'PENDING');
 
             const isRejected = (context && context.status === 'REJECTED') ||
-                (!hasMatch && data.incomingRequest && data.incomingRequest.status === 'REJECTED');
+                (!hasMatch && !hasCompletedMatch && data.incomingRequest && data.incomingRequest.status === 'REJECTED');
 
             const banner = document.getElementById('peerProfileProposalBanner');
             const chipEl = document.getElementById('peerProfileBannerChip');
@@ -520,12 +521,16 @@ const app = {
             const notice = document.getElementById('proposalNotice');
 
             if (hasMatch) {
-                // Confirmed active partnership - replace proposal actions with direct Chat & Feedback
+                // Confirmed active partnership - replace proposal actions with direct Chat, Feedback, & End Exchange
                 if (banner) {
                     banner.className = 'proposal-action-banner banner-matched';
+                    banner.style.background = '';
+                    banner.style.border = '';
                     banner.classList.remove('hidden');
                     if (chipEl) {
                         chipEl.className = 'proposal-banner-chip chip-matched';
+                        chipEl.style.background = '';
+                        chipEl.style.color = '';
                         chipEl.textContent = '🤝 Active Study Partnership';
                     }
                     if (titleEl) {
@@ -538,6 +543,34 @@ const app = {
                         actionsEl.innerHTML = `
                             <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">💬 Open Chat</button>
                             <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">⭐ Leave Feedback</button>
+                            <button class="btn btn-outline-danger" onclick="app.openCompleteExchangeModal(${activeMatchId || 0}, '${this.escapeForJs(p.fullName)}')">✓ End Exchange</button>
+                        `;
+                    }
+                }
+                if (formBox) formBox.classList.add('hidden');
+            } else if (hasCompletedMatch) {
+                // Confirmed completed exchange
+                if (banner) {
+                    banner.className = 'proposal-action-banner';
+                    banner.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                    banner.style.border = '1px solid #cbd5e1';
+                    banner.classList.remove('hidden');
+                    if (chipEl) {
+                        chipEl.className = 'proposal-banner-chip';
+                        chipEl.style.background = '#e2e8f0';
+                        chipEl.style.color = '#334155';
+                        chipEl.textContent = '✓ Skill Exchange Completed';
+                    }
+                    if (titleEl) {
+                        titleEl.textContent = `Completed Collaboration with ${p.fullName}`;
+                    }
+                    if (msgEl) {
+                        msgEl.textContent = 'This skill exchange has concluded. You can review past messages or leave feedback anytime.';
+                    }
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">💬 Chat History</button>
+                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">⭐ Leave Feedback</button>
                         `;
                     }
                 }
@@ -546,9 +579,13 @@ const app = {
                 // Pending incoming request awaiting response
                 if (banner) {
                     banner.className = 'proposal-action-banner';
+                    banner.style.background = '';
+                    banner.style.border = '';
                     banner.classList.remove('hidden');
                     if (chipEl) {
                         chipEl.className = 'proposal-banner-chip';
+                        chipEl.style.background = '';
+                        chipEl.style.color = '';
                         chipEl.textContent = '📬 Pending Exchange Proposal';
                     }
                     if (titleEl) {
@@ -572,9 +609,13 @@ const app = {
                 // Proposal was declined
                 if (banner) {
                     banner.className = 'proposal-action-banner banner-rejected';
+                    banner.style.background = '';
+                    banner.style.border = '';
                     banner.classList.remove('hidden');
                     if (chipEl) {
                         chipEl.className = 'proposal-banner-chip chip-rejected';
+                        chipEl.style.background = '';
+                        chipEl.style.color = '';
                         chipEl.textContent = '✕ Proposal Declined';
                     }
                     if (titleEl) {
@@ -898,51 +939,164 @@ const app = {
     },
 
     // ── My Matches ────────────────────────────────────────────────
+    matchActiveTab: 'active',
+
+    switchMatchTab(tab) {
+        this.matchActiveTab = tab;
+        const actBtn = document.getElementById('tabActiveMatchesBtn');
+        const compBtn = document.getElementById('tabCompletedMatchesBtn');
+        const actBox = document.getElementById('activeMatchesBox');
+        const compBox = document.getElementById('completedMatchesBox');
+
+        if (tab === 'active') {
+            if (actBtn) actBtn.classList.add('active');
+            if (compBtn) compBtn.classList.remove('active');
+            if (actBox) actBox.classList.remove('hidden');
+            if (compBox) compBox.classList.add('hidden');
+        } else {
+            if (actBtn) actBtn.classList.remove('active');
+            if (compBtn) compBtn.classList.add('active');
+            if (actBox) actBox.classList.add('hidden');
+            if (compBox) compBox.classList.remove('hidden');
+        }
+    },
+
     async loadMatches() {
         if (!this.currentUser) return;
-        const box = document.getElementById('matchesList');
-        box.innerHTML = '<p class="empty-state">Loading partnerships...</p>';
+        const actListEl = document.getElementById('matchesList');
+        const compListEl = document.getElementById('completedMatchesList');
+        const actCountEl = document.getElementById('activeMatchesCount');
+        const compCountEl = document.getElementById('completedMatchesCount');
+
+        if (actListEl) actListEl.innerHTML = '<p class="empty-state">Loading partnerships...</p>';
+        if (compListEl) compListEl.innerHTML = '<p class="empty-state">Loading completed exchanges...</p>';
 
         try {
             const data = await this.api(`/api/matches?studentId=${this.currentUser.studentId}`);
-            if (data.length === 0) {
-                box.innerHTML = '<p class="empty-state">No active study partnerships yet. Accept an incoming request or find peers to begin!</p>';
-                return;
+            const items = Array.isArray(data) ? data : [];
+
+            const activeList = items.filter(item => {
+                const m = item.match;
+                if (!m) return false;
+                return (m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED');
+            });
+
+            const completedList = items.filter(item => {
+                const m = item.match;
+                if (!m) return false;
+                return (m.isActive === false || m.isCompleted || m.status === 'COMPLETED');
+            });
+
+            if (actCountEl) actCountEl.textContent = activeList.length;
+            if (compCountEl) compCountEl.textContent = completedList.length;
+
+            // Render active
+            if (actListEl) {
+                if (activeList.length === 0) {
+                    actListEl.innerHTML = '<p class="empty-state">No active study partnerships yet. Accept an incoming request or find peers to begin!</p>';
+                } else {
+                    actListEl.innerHTML = activeList.map(item => this.renderMatchCard(item, true)).join('');
+                }
             }
 
-            box.innerHTML = data.map(item => {
-                const m = item.match;
-                const peer = m.studentId1 === this.currentUser.studentId ? m.student2 : m.student1;
-                const peerId = peer ? (peer.studentId || peer.id) : (m.studentId1 === this.currentUser.studentId ? m.studentId2 : m.studentId1);
-                const score = Math.round(m.matchScore);
-                const peerName = peer ? peer.fullName : 'Partner';
-                const peerDept = peer ? peer.department : '';
-
-                return `
-                    <div class="match-card">
-                        <div>
-                            <h3>🤝 Exchange Partner: <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
-                            <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)} • Email: ${this.escapeHtml(peer ? peer.email : '')}</p>
-                            <p class="text-muted" style="font-size:0.82rem; margin-top:4px;">Matched: ${m.matchedAt ? m.matchedAt.substring(0, 10) : 'Active'}</p>
-                        </div>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-                            <span class="badge badge-high">${score}% Match</span>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-                                <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">👁 Profile</button>
-                                <button class="btn btn-primary btn-sm" onclick="app.openChatModal(${m.matchId}, '${this.escapeForJs(peerName)}', '${this.escapeForJs(peerDept)}')">💬 Chat</button>
-                                ${item.reviewed ? `
-                                    <span class="badge badge-low">✓ Review Submitted</span>
-                                ` : `
-                                    <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">⭐ Leave Feedback</button>
-                                `}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            // Render completed
+            if (compListEl) {
+                if (completedList.length === 0) {
+                    compListEl.innerHTML = '<p class="empty-state">No completed skill exchanges yet.</p>';
+                } else {
+                    compListEl.innerHTML = completedList.map(item => this.renderMatchCard(item, false)).join('');
+                }
+            }
 
         } catch (err) {
-            box.innerHTML = `<p class="empty-state">Error loading matches: ${err.message}</p>`;
+            if (actListEl) actListEl.innerHTML = `<p class="empty-state">Error loading matches: ${err.message}</p>`;
+            if (compListEl) compListEl.innerHTML = `<p class="empty-state">Error loading matches: ${err.message}</p>`;
+        }
+    },
+
+    renderMatchCard(item, isActive) {
+        const m = item.match;
+        const myId = Number(this.currentUser.studentId || this.currentUser.id);
+        const s1 = Number(m.studentId1 ?? (m.student1 ? m.student1.studentId : 0));
+        const peer = (s1 === myId) ? (m.student2 || {}) : (m.student1 || {});
+        const peerId = peer.studentId || peer.id || ((s1 === myId) ? m.studentId2 : m.studentId1);
+        const score = Math.round(m.matchScore || 85);
+        const peerName = peer.fullName || 'Partner';
+        const peerDept = peer.department || '';
+        const peerEmail = peer.email || '';
+
+        return `
+            <div class="match-card ${isActive ? '' : 'match-card-completed'}">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <h3>${isActive ? '🤝 Active Partner:' : '✓ Completed Partner:'} <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
+                        ${isActive ? '' : '<span class="badge badge-low" style="background:#e2e8f0; color:#475569; font-weight:600;">✓ Completed</span>'}
+                    </div>
+                    <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)}${peerEmail ? ` • Email: ${this.escapeHtml(peerEmail)}` : ''}</p>
+                    <p class="text-muted" style="font-size:0.82rem; margin-top:4px;">
+                        Matched: ${m.matchedAt ? m.matchedAt.substring(0, 10) : 'Active'}
+                        ${m.completedAt ? ` • Finished: ${m.completedAt.substring(0, 10)}` : ''}
+                    </p>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                    <span class="badge ${score >= 70 ? 'badge-high' : score >= 40 ? 'badge-medium' : 'badge-low'}">${score}% Match</span>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+                        <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">👁 Profile</button>
+                        <button class="btn btn-primary btn-sm" onclick="app.openChatModal(${m.matchId}, '${this.escapeForJs(peerName)}', '${this.escapeForJs(peerDept)}')">
+                            💬 ${isActive ? 'Chat' : 'Chat History'}
+                        </button>
+                        ${isActive ? `
+                            <button class="btn btn-outline-danger btn-sm" onclick="app.openCompleteExchangeModal(${m.matchId}, '${this.escapeForJs(peerName)}')">
+                                ✓ End Exchange
+                            </button>
+                        ` : ''}
+                        ${item.reviewed ? `
+                            <span class="badge badge-low">✓ Reviewed</span>
+                        ` : `
+                            <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">⭐ Leave Feedback</button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    // ── Conclude / Complete Exchange Modal ────────────────────────
+    pendingCompleteMatchId: null,
+
+    openCompleteExchangeModal(matchId, partnerName) {
+        this.pendingCompleteMatchId = matchId;
+        const textEl = document.getElementById('completeExchangeModalText');
+        if (textEl) {
+            textEl.innerHTML = `Are you ready to mark your skill exchange with <strong>${this.escapeHtml(partnerName || 'your peer')}</strong> as completed?`;
+        }
+        const modal = document.getElementById('completeExchangeModal');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    closeCompleteExchangeModal() {
+        this.pendingCompleteMatchId = null;
+        const modal = document.getElementById('completeExchangeModal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    async confirmCompleteExchange() {
+        if (!this.pendingCompleteMatchId) return;
+        const matchId = this.pendingCompleteMatchId;
+        try {
+            await this.api('/api/matches/complete', 'POST', {
+                matchId: parseInt(matchId),
+                currentUserId: this.currentUser.studentId
+            });
+            this.showToast('Skill exchange marked as completed! Partnership moved to Completed Exchanges.');
+            this.closeCompleteExchangeModal();
+            await this.loadMatches();
+            await this.loadDashboard();
+            if (this.activePeerId) {
+                await this.viewPeerProfile(this.activePeerId, this.activeProfileContext);
+            }
+        } catch (err) {
+            this.showToast(err.message, 'error');
         }
     },
 
@@ -950,6 +1104,8 @@ const app = {
     openFeedbackModal(matchId) {
         document.getElementById('modalMatchId').value = matchId;
         document.getElementById('modalComment').value = '';
+        const chk = document.getElementById('modalCompleteExchange');
+        if (chk) chk.checked = true;
         document.getElementById('feedbackModal').classList.remove('hidden');
     },
 
@@ -962,17 +1118,23 @@ const app = {
         const matchId = document.getElementById('modalMatchId').value;
         const rating = document.getElementById('modalRating').value;
         const comment = document.getElementById('modalComment').value.trim();
+        const markCompleted = document.getElementById('modalCompleteExchange')?.checked ?? false;
 
         try {
             await this.api('/api/feedback/submit', 'POST', {
                 matchId: parseInt(matchId),
                 reviewerId: this.currentUser.studentId,
                 rating: parseInt(rating),
-                comment: comment
+                comment: comment,
+                markCompleted: !!markCompleted
             });
-            this.showToast('Thank you! Your rating and feedback have been recorded.');
+            this.showToast(markCompleted ? 'Feedback saved and skill exchange marked as completed!' : 'Thank you! Your rating and feedback have been recorded.');
             this.closeFeedbackModal();
-            this.loadMatches();
+            await this.loadMatches();
+            await this.loadDashboard();
+            if (this.activePeerId) {
+                await this.viewPeerProfile(this.activePeerId, this.activeProfileContext);
+            }
         } catch (err) {
             this.showToast(err.message, 'error');
         }
@@ -1470,12 +1632,19 @@ const FirestoreBackend = {
             const wanCount = (stu.wanted || []).length;
 
             const [m1, m2] = await Promise.all([
-                this.db.collection('matches').where('studentId1', '==', sid).where('isActive', '==', true).get(),
-                this.db.collection('matches').where('studentId2', '==', sid).where('isActive', '==', true).get()
+                this.db.collection('matches').where('studentId1', '==', sid).get(),
+                this.db.collection('matches').where('studentId2', '==', sid).get()
             ]);
             const matchMap = new Map();
             m1.forEach(d => matchMap.set(d.id, d.data()));
             m2.forEach(d => matchMap.set(d.id, d.data()));
+
+            let activeCount = 0;
+            matchMap.forEach(m => {
+                if (m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED') {
+                    activeCount++;
+                }
+            });
 
             const [reqSnapTo, reqSnapRecv] = await Promise.all([
                 this.db.collection('requests').where('toId', '==', sid).where('status', '==', 'PENDING').get(),
@@ -1493,7 +1662,7 @@ const FirestoreBackend = {
             return {
                 offeredCount: offCount,
                 wantedCount: wanCount,
-                activeMatches: matchMap.size,
+                activeMatches: activeCount,
                 pendingRequests: pendingSet.size,
                 avgRating: avg
             };
@@ -1653,20 +1822,26 @@ const FirestoreBackend = {
             m1Snap.forEach(d => matchMap.set(d.id, d.data()));
             m2Snap.forEach(d => matchMap.set(d.id, d.data()));
             let activeMatch = null;
+            let completedMatch = null;
             for (const m of matchMap.values()) {
                 const s1 = Number(m.studentId1 ?? m.fromId ?? 0);
                 const s2 = Number(m.studentId2 ?? m.toId ?? 0);
                 const hasIdsArray = Array.isArray(m.studentIds) && m.studentIds.map(Number).includes(myId) && m.studentIds.map(Number).includes(pid);
-                if (((s1 === myId && s2 === pid) || (s1 === pid && s2 === myId) || hasIdsArray) && m.isActive !== false) {
-                    activeMatch = m;
-                    break;
+                if ((s1 === myId && s2 === pid) || (s1 === pid && s2 === myId) || hasIdsArray) {
+                    if (m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED') {
+                        activeMatch = m;
+                        break;
+                    } else {
+                        completedMatch = m;
+                    }
                 }
             }
 
             const hasAccepted = (latestIncoming && latestIncoming.status === 'ACCEPTED') || (latestOutgoing && latestOutgoing.status === 'ACCEPTED');
-            const hasActiveMatch = !!activeMatch || hasAccepted;
-            const matchId = activeMatch ? Number(activeMatch.matchId || activeMatch.id) : null;
-            const hasExistingRequest = hasActiveMatch ||
+            const hasActiveMatch = !!activeMatch || (hasAccepted && !completedMatch);
+            const hasCompletedMatch = !hasActiveMatch && !!completedMatch;
+            const matchId = activeMatch ? Number(activeMatch.matchId || activeMatch.id) : (completedMatch ? Number(completedMatch.matchId || completedMatch.id) : null);
+            const hasExistingRequest = hasActiveMatch || hasCompletedMatch ||
                 (latestOutgoing && latestOutgoing.status === 'PENDING') ||
                 (latestIncoming && latestIncoming.status === 'PENDING');
 
@@ -1675,6 +1850,7 @@ const FirestoreBackend = {
                 matchScore: score,
                 avgRating: avg,
                 hasActiveMatch,
+                hasCompletedMatch,
                 matchId,
                 incomingRequest: latestIncoming ? { requestId: latestIncoming.requestId, status: latestIncoming.status, message: latestIncoming.message } : null,
                 outgoingRequest: latestOutgoing ? { requestId: latestOutgoing.requestId, status: latestOutgoing.status, message: latestOutgoing.message } : null,
@@ -1774,11 +1950,26 @@ const FirestoreBackend = {
             return { success: true };
         }
 
+        if (path === '/api/matches/complete') {
+            const mid = parseInt(data.matchId);
+            const matchRef = this.db.collection('matches').doc(String(mid));
+            const matchDoc = await matchRef.get();
+            if (!matchDoc.exists) throw new Error('Match not found.');
+            await matchRef.update({
+                isActive: false,
+                isCompleted: true,
+                status: 'COMPLETED',
+                completedAt: new Date().toISOString().substring(0, 10),
+                completedBy: data.currentUserId || 0
+            });
+            return { success: true };
+        }
+
         if (path === '/api/matches') {
             const sid = parseInt(params.studentId);
             const [m1, m2, fbSnap] = await Promise.all([
-                this.db.collection('matches').where('studentId1', '==', sid).where('isActive', '==', true).get(),
-                this.db.collection('matches').where('studentId2', '==', sid).where('isActive', '==', true).get(),
+                this.db.collection('matches').where('studentId1', '==', sid).get(),
+                this.db.collection('matches').where('studentId2', '==', sid).get(),
                 this.db.collection('feedback').where('reviewerId', '==', sid).get()
             ]);
             const matchMap = new Map();
@@ -1790,6 +1981,8 @@ const FirestoreBackend = {
 
             const results = [];
             for (const m of matchMap.values()) {
+                const isActive = (m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED');
+                m.isActive = isActive;
                 results.push({
                     match: m,
                     reviewed: reviewedMatchIds.has(m.matchId)
@@ -1803,10 +1996,20 @@ const FirestoreBackend = {
             const reviewer = revDoc.exists ? this.normalizeStudent(revDoc.data()) : {};
 
             let reviewedId = 0;
-            const matchDoc = await this.db.collection('matches').doc(String(data.matchId)).get();
+            const matchRef = this.db.collection('matches').doc(String(data.matchId));
+            const matchDoc = await matchRef.get();
             if (matchDoc.exists) {
                 const m = matchDoc.data();
                 reviewedId = (m.studentId1 === data.reviewerId) ? m.studentId2 : m.studentId1;
+                if (data.markCompleted) {
+                    await matchRef.update({
+                        isActive: false,
+                        isCompleted: true,
+                        status: 'COMPLETED',
+                        completedAt: new Date().toISOString().substring(0, 10),
+                        completedBy: data.reviewerId || 0
+                    });
+                }
             }
 
             const fid = Date.now();
@@ -1967,7 +2170,7 @@ const MockBackend = {
             const sid = parseInt(params.studentId);
             const off = (state.offered[sid] || []).length;
             const wan = (state.wanted[sid] || []).length;
-            const matches = state.matches.filter(m => (m.studentId1 === sid || m.studentId2 === sid) && m.isActive).length;
+            const matches = state.matches.filter(m => (m.studentId1 === sid || m.studentId2 === sid) && m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED').length;
             const pending = state.requests.filter(r => r.receiverId === sid && r.status === 'PENDING').length;
             const reviews = state.feedback.filter(f => f.reviewedId === sid);
             const avg = reviews.length ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length) : 0;
@@ -2066,7 +2269,12 @@ const MockBackend = {
             const avg = reviews.length ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length) : 0;
 
             const activeMatch = state.matches.find(m =>
-                ((m.studentId1 === myId && m.studentId2 === pid) || (m.studentId1 === pid && m.studentId2 === myId)) && m.isActive !== false
+                ((m.studentId1 === myId && m.studentId2 === pid) || (m.studentId1 === pid && m.studentId2 === myId)) &&
+                m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED'
+            );
+            const completedMatch = state.matches.find(m =>
+                ((m.studentId1 === myId && m.studentId2 === pid) || (m.studentId1 === pid && m.studentId2 === myId)) &&
+                (m.isActive === false || m.isCompleted || m.status === 'COMPLETED')
             );
             const inReqs = state.requests.filter(r => r.senderId === pid && r.receiverId === myId).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             const outReqs = state.requests.filter(r => r.senderId === myId && r.receiverId === pid).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -2074,15 +2282,17 @@ const MockBackend = {
             const latestOut = outReqs[0] || null;
 
             const hasAccepted = (latestIn && latestIn.status === 'ACCEPTED') || (latestOut && latestOut.status === 'ACCEPTED');
-            const hasActiveMatch = !!activeMatch || hasAccepted;
-            const matchId = activeMatch ? activeMatch.matchId : null;
-            const hasExisting = hasActiveMatch || (latestOut && latestOut.status === 'PENDING') || (latestIn && latestIn.status === 'PENDING');
+            const hasActiveMatch = !!activeMatch || (hasAccepted && !completedMatch);
+            const hasCompletedMatch = !hasActiveMatch && !!completedMatch;
+            const matchId = activeMatch ? activeMatch.matchId : (completedMatch ? completedMatch.matchId : null);
+            const hasExisting = hasActiveMatch || hasCompletedMatch || (latestOut && latestOut.status === 'PENDING') || (latestIn && latestIn.status === 'PENDING');
 
             return {
                 peer,
                 matchScore: score,
                 avgRating: avg,
                 hasActiveMatch,
+                hasCompletedMatch,
                 matchId,
                 incomingRequest: latestIn ? { requestId: latestIn.requestId, status: latestIn.status, message: latestIn.message } : null,
                 outgoingRequest: latestOut ? { requestId: latestOut.requestId, status: latestOut.status, message: latestOut.message } : null,
@@ -2143,10 +2353,25 @@ const MockBackend = {
             return { success: true };
         }
 
+        if (path === '/api/matches/complete') {
+            const mid = parseInt(data.matchId);
+            const m = state.matches.find(item => item.matchId === mid);
+            if (m) {
+                m.isActive = false;
+                m.isCompleted = true;
+                m.status = 'COMPLETED';
+                m.completedAt = new Date().toISOString().substring(0, 10);
+                this.saveState(state);
+            }
+            return { success: true };
+        }
+
         if (path === '/api/matches') {
             const sid = parseInt(params.studentId);
-            const myMatches = state.matches.filter(m => (m.studentId1 === sid || m.studentId2 === sid) && m.isActive);
+            const myMatches = state.matches.filter(m => (m.studentId1 === sid || m.studentId2 === sid));
             return myMatches.map(m => {
+                const isActive = (m.isActive !== false && !m.isCompleted && m.status !== 'COMPLETED');
+                m.isActive = isActive;
                 const reviewed = state.feedback.some(f => f.matchId === m.matchId && f.reviewerId === sid);
                 return { match: m, reviewed };
             });
@@ -2156,6 +2381,12 @@ const MockBackend = {
             const reviewer = state.students.find(s => s.studentId === data.reviewerId);
             const match = state.matches.find(m => m.matchId === data.matchId);
             const reviewedId = match ? (match.studentId1 === data.reviewerId ? match.studentId2 : match.studentId1) : 0;
+            if (match && data.markCompleted) {
+                match.isActive = false;
+                match.isCompleted = true;
+                match.status = 'COMPLETED';
+                match.completedAt = new Date().toISOString().substring(0, 10);
+            }
             const stars = '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating);
 
             state.feedback.push({

@@ -248,6 +248,26 @@ body {
 }
 .btn-danger:hover { background: #dc2626; }
 
+.btn-outline-danger {
+    background: transparent;
+    border-color: #fca5a5;
+    color: var(--danger);
+}
+.btn-outline-danger:hover {
+    background: var(--danger-light);
+    border-color: var(--danger);
+}
+
+.btn-outline-success {
+    background: transparent;
+    border-color: #86efac;
+    color: #059669;
+}
+.btn-outline-success:hover {
+    background: #ecfdf5;
+    border-color: #10b981;
+}
+
 .btn-sm {
     padding: 6px 12px;
     font-size: 0.82rem;
