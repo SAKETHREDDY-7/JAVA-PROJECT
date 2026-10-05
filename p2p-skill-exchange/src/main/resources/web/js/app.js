@@ -194,6 +194,16 @@ const app = {
             }
         });
 
+        // Update navUser active style if on profile
+        const navUser = document.getElementById('navUser');
+        if (navUser) {
+            if (viewName === 'profile') {
+                navUser.classList.add('active');
+            } else {
+                navUser.classList.remove('active');
+            }
+        }
+
         // Close mobile nav menu
         document.getElementById('navLinks').classList.remove('show');
 

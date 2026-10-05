@@ -16,7 +16,7 @@
         <div class="nav-container">
             <div class="nav-brand" onclick="app.showView('dashboard')">
                 <span class="logo-icon">🎓</span>
-                <span class="logo-text">Skill<strong>Exchange</strong></span>
+                <span class="logo-text">Skill <strong>Sync</strong></span>
             </div>
             
             <button class="nav-toggle" id="navToggle" onclick="app.toggleMobileNav()">☰</button>
@@ -27,14 +27,11 @@
                 <a href="javascript:void(0)" class="nav-link" data-view="skills" onclick="app.showView('skills')">⚡ My Skills</a>
                 <a href="javascript:void(0)" class="nav-link" data-view="requests" onclick="app.showView('requests')">📬 Requests <span id="navReqBadge" class="nav-badge hidden">0</span></a>
                 <a href="javascript:void(0)" class="nav-link" data-view="matches" onclick="app.showView('matches')">🤝 My Matches</a>
-                <a href="javascript:void(0)" class="nav-link" data-view="profile" onclick="app.showView('profile')">👤 Profile</a>
-                <a href="javascript:void(0)" class="nav-link nav-logout" onclick="app.logout()">🚪 Sign Out</a>
             </div>
 
-            <div class="nav-user" id="navUser">
+            <div class="nav-user" id="navUser" onclick="app.showView('profile')" title="View Profile">
                 <span class="user-avatar">👤</span>
                 <span id="navUserName">Student</span>
-                <span id="serverStatusBadge" class="badge-server-live" style="margin-left: 8px; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; cursor: default;">🟢 Live Server Mode</span>
             </div>
         </div>
     </nav>
@@ -363,6 +360,9 @@
                     <h1>Student Profile</h1>
                     <p class="subtitle">View and update your academic information.</p>
                 </div>
+                <button type="button" class="btn btn-outline btn-logout-profile" onclick="app.logout()">
+                    🚪 Sign Out
+                </button>
             </div>
 
             <div class="profile-edit-grid">
