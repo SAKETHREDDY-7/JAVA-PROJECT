@@ -24,6 +24,7 @@ public class ApiHandler implements HttpHandler {
     private final MatchService matchService = new MatchService();
     private final FeedbackService feedbackService = new FeedbackService();
     private final MatchingService matchingService = new MatchingService();
+    private final ChatService chatService = new ChatService();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -65,8 +66,14 @@ public class ApiHandler implements HttpHandler {
                 handleOutgoingRequests(exchange);
             } else if (path.startsWith("/api/requests/respond") && "POST".equalsIgnoreCase(method)) {
                 handleRespondRequest(exchange);
+            } else if (path.startsWith("/api/matches/complete") && "POST".equalsIgnoreCase(method)) {
+                handleCompleteMatch(exchange);
             } else if (path.startsWith("/api/matches") && "GET".equalsIgnoreCase(method)) {
                 handleMatches(exchange);
+            } else if (path.startsWith("/api/chat/messages") && "GET".equalsIgnoreCase(method)) {
+                handleChatMessages(exchange);
+            } else if (path.startsWith("/api/chat/send") && "POST".equalsIgnoreCase(method)) {
+                handleSendChatMessage(exchange);
             } else if (path.startsWith("/api/feedback/submit") && "POST".equalsIgnoreCase(method)) {
                 handleSubmitFeedback(exchange);
             } else if (path.startsWith("/api/feedback/student") && "GET".equalsIgnoreCase(method)) {
@@ -207,11 +214,23 @@ public class ApiHandler implements HttpHandler {
         double avgRating = feedbackService.getAverageRating(peerId);
         boolean hasExisting = requestService.hasExistingRequest(currentUserId, peerId);
 
+        List<Match> myMatches = matchService.getMatchesForStudent(currentUserId);
+        Integer activeMatchId = null;
+        for (Match m : myMatches) {
+            if (m.getPeerId(currentUserId) == peerId && m.isActive()) {
+                activeMatchId = m.getMatchId();
+                break;
+            }
+        }
+        boolean hasActiveMatch = (activeMatchId != null);
+
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"peer\":").append(JsonUtil.studentToJson(peer)).append(",");
         sb.append("\"matchScore\":").append(score).append(",");
         sb.append("\"avgRating\":").append(String.format(Locale.US, "%.1f", avgRating)).append(",");
-        sb.append("\"hasExistingRequest\":").append(hasExisting).append(",");
+        sb.append("\"hasExistingRequest\":").append(hasExisting || hasActiveMatch).append(",");
+        sb.append("\"hasActiveMatch\":").append(hasActiveMatch).append(",");
+        sb.append("\"matchId\":").append(activeMatchId != null ? activeMatchId : "null").append(",");
 
         sb.append("\"offeredSkills\":[");
         for (int i = 0; i < offered.size(); i++) {
@@ -291,7 +310,7 @@ public class ApiHandler implements HttpHandler {
         Map<String, String> params = parseQueryParams(exchange);
         int studentId = Integer.parseInt(params.getOrDefault("studentId", "0"));
 
-        List<Match> matches = matchService.getMatchesForStudent(studentId);
+        List<Match> matches = matchService.getAllMatchesForStudent(studentId);
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < matches.size(); i++) {
             if (i > 0) sb.append(",");
@@ -304,6 +323,45 @@ public class ApiHandler implements HttpHandler {
         sendResponse(exchange, 200, sb.toString());
     }
 
+    private void handleCompleteMatch(HttpExchange exchange) throws IOException {
+        Map<String, String> data = JsonUtil.parseJsonObject(readBody(exchange));
+        int matchId = Integer.parseInt(data.get("matchId"));
+        int studentId = Integer.parseInt(data.get("studentId"));
+
+        boolean success = matchService.completeMatch(matchId, studentId);
+        if (success) {
+            sendResponse(exchange, 200, JsonUtil.successResponse("Skill exchange marked as completed!"));
+        } else {
+            sendResponse(exchange, 400, JsonUtil.errorResponse("Failed to complete skill exchange."));
+        }
+    }
+
+    private void handleChatMessages(HttpExchange exchange) throws IOException {
+        Map<String, String> params = parseQueryParams(exchange);
+        int matchId = Integer.parseInt(params.getOrDefault("matchId", "0"));
+        int studentId = Integer.parseInt(params.getOrDefault("studentId", "0"));
+
+        List<ChatMessage> messages = chatService.getMessages(matchId, studentId);
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < messages.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(JsonUtil.chatMessageToJson(messages.get(i)));
+        }
+        sb.append("]");
+        sendResponse(exchange, 200, sb.toString());
+    }
+
+    private void handleSendChatMessage(HttpExchange exchange) throws IOException {
+        Map<String, String> data = JsonUtil.parseJsonObject(readBody(exchange));
+        int matchId = Integer.parseInt(data.get("matchId"));
+        int senderId = Integer.parseInt(data.get("senderId"));
+        String content = data.get("content");
+
+        ChatMessage saved = chatService.sendMessage(matchId, senderId, content);
+        String json = "{\"success\":true,\"message\":" + JsonUtil.chatMessageToJson(saved) + "}";
+        sendResponse(exchange, 200, json);
+    }
+
     private void handleSubmitFeedback(HttpExchange exchange) throws IOException {
         Map<String, String> data = JsonUtil.parseJsonObject(readBody(exchange));
         int matchId = Integer.parseInt(data.get("matchId"));
@@ -312,6 +370,13 @@ public class ApiHandler implements HttpHandler {
         String comment = data.get("comment");
 
         feedbackService.submitFeedback(matchId, reviewerId, rating, comment);
+
+        if ("true".equalsIgnoreCase(data.get("markCompleted"))) {
+            try {
+                matchService.completeMatch(matchId, reviewerId);
+            } catch (Exception ignored) {}
+        }
+
         sendResponse(exchange, 200, JsonUtil.successResponse("Rating and review submitted successfully!"));
     }
 
