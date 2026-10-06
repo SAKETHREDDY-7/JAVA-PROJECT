@@ -92,7 +92,8 @@ public class SmokeIntegrationTest {
 
     private static void testInputValidation() {
         System.out.println("\n--- 3. Input Validation Test ---");
-        assertTrue("Valid Email", InputValidator.validateEmail("saketh@college.edu") == null, "Valid email accepted");
+        assertTrue("Valid KLU Email", InputValidator.validateEmail("saketh@klu.ac.in") == null, "Valid KLU email accepted");
+        assertTrue("Reject Gmail Email", InputValidator.validateEmail("student@gmail.com") != null, "Non-KLU email (@gmail.com) rejected");
         assertTrue("Invalid Email", InputValidator.validateEmail("invalid-email") != null, "Malformed email rejected");
         assertTrue("Password Length", InputValidator.validatePassword("12345") != null, "Short password rejected");
         assertTrue("Valid Rating", InputValidator.validateRating(4) == null, "Rating 4 accepted");
@@ -136,9 +137,9 @@ public class SmokeIntegrationTest {
 
     private static void testPeerSortingAndRanking() {
         System.out.println("\n--- 6. DSA Peer Sorting & Ranking (Heap & Sort) Test ---");
-        Student s1 = new Student("S1", "Alice", "alice@college.edu", "pass", "CSE", 2, "");
-        Student s2 = new Student("S2", "Bob", "bob@college.edu", "pass", "ECE", 2, "");
-        Student s3 = new Student("S3", "Charlie", "charlie@college.edu", "pass", "MECH", 2, "");
+        Student s1 = new Student("S1", "Alice", "alice@klu.ac.in", "pass", "CSE", 2, "");
+        Student s2 = new Student("S2", "Bob", "bob@klu.ac.in", "pass", "ECE", 2, "");
+        Student s3 = new Student("S3", "Charlie", "charlie@klu.ac.in", "pass", "MECH", 2, "");
 
         List<PeerMatch> matches = new ArrayList<>();
         matches.add(new PeerMatch(s1, 45.0, List.of(), List.of()));
@@ -179,7 +180,7 @@ public class SmokeIntegrationTest {
         assertTrue("Skill Model Integrity", "Java".equals(skill.getSkillName()), "Skill model initialized correctly");
         assertTrue("Composition Pattern", skill.getCategory() != null, "Skill has-a Category composition verified");
 
-        Student s = new Student("CS2024001", "Saketh", "saketh@college.edu", "hash", "CSE", 3, "Bio");
+        Student s = new Student("CS2024001", "Saketh", "saketh@klu.ac.in", "hash", "CSE", 3, "Bio");
         assertTrue("Student Model Integrity", "CS2024001".equals(s.getStudentNumber()), "Student entity verified");
 
         try {

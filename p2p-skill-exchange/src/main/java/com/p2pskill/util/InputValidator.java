@@ -76,14 +76,21 @@ public final class InputValidator {
         return null;
     }
 
+    public static final String REQUIRED_EMAIL_DOMAIN = "@klu.ac.in";
+
     /**
-     * Validates an email address format.
+     * Validates an email address format and university domain.
+     * Only student email addresses ending with @klu.ac.in are allowed.
      * @return error message, or null if valid
      */
     public static String validateEmail(String email) {
         if (isBlank(email)) return "Email address is required.";
-        if (!EMAIL_PATTERN.matcher(email.trim()).matches()) {
-            return "Please enter a valid email address (e.g., name@domain.com).";
+        String cleanEmail = email.trim().toLowerCase();
+        if (!EMAIL_PATTERN.matcher(cleanEmail).matches()) {
+            return "Please enter a valid email address (e.g., student" + REQUIRED_EMAIL_DOMAIN + ").";
+        }
+        if (!cleanEmail.endsWith(REQUIRED_EMAIL_DOMAIN)) {
+            return "Must be a valid student ID.";
         }
         return null;
     }

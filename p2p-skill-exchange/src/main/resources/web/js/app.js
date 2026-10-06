@@ -305,6 +305,11 @@ const app = {
             return;
         }
 
+        if (!email.toLowerCase().endsWith('@klu.ac.in')) {
+            this.showToast('Must be a valid student ID', 'error');
+            return;
+        }
+
         try {
             const data = await this.api('/api/auth/register', 'POST', {
                 studentNumber, fullName, email, password, department, yearOfStudy, bio
@@ -1042,7 +1047,7 @@ const app = {
                         <h3>${isActive ? '🤝 Active Partner:' : '✓ Completed Partner:'} <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
                         ${isActive ? '' : '<span class="badge badge-low" style="background:#e2e8f0; color:#475569; font-weight:600;">✓ Completed</span>'}
                     </div>
-                    <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)}${peerEmail ? ` • Email: ${this.escapeHtml(peerEmail)}` : ''}</p>
+                    <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)}${peerEmail ? ` • Student Email: ${this.escapeHtml(peerEmail)}` : ''}</p>
                     <p class="text-muted" style="font-size:0.82rem; margin-top:4px;">
                         Matched: ${m.matchedAt ? m.matchedAt.substring(0, 10) : 'Active'}
                         ${m.completedAt ? ` • Finished: ${m.completedAt.substring(0, 10)}` : ''}
@@ -1594,6 +1599,9 @@ const FirestoreBackend = {
 
         if (path === '/api/auth/register') {
             const emailInput = (data.email || '').trim().toLowerCase();
+            if (!emailInput.endsWith('@klu.ac.in')) {
+                throw new Error('Must be a valid student ID');
+            }
             const existingSnap = await this.db.collection('students')
                 .where('email', '==', emailInput)
                 .limit(1)
@@ -1603,13 +1611,23 @@ const FirestoreBackend = {
                 throw new Error('Email already registered.');
             }
 
+            const studentNumInput = (data.studentNumber || '').trim().toUpperCase();
             const allSnap = await this.db.collection('students').get();
+            let duplicateRegNo = false;
             let maxId = 0;
             allSnap.forEach(d => {
                 const s = d.data();
+                const existingNum = (s.studentNumber || s.student_number || '').trim().toUpperCase();
+                if (studentNumInput && existingNum === studentNumInput) {
+                    duplicateRegNo = true;
+                }
                 const sid = Number(s.studentId ?? s.id ?? 0);
                 if (sid > maxId) maxId = sid;
             });
+
+            if (duplicateRegNo) {
+                throw new Error('Student Registration Number / ID (' + studentNumInput + ') is already registered.');
+            }
             const newId = maxId + 1;
 
             const stu = {
@@ -2156,14 +2174,21 @@ const MockBackend = {
         }
 
         if (path === '/api/auth/register') {
-            const existing = state.students.find(s => s.email.toLowerCase() === data.email.trim().toLowerCase());
+            const emailInput = (data.email || '').trim().toLowerCase();
+            if (!emailInput.endsWith('@klu.ac.in')) {
+                throw new Error('Must be a valid student ID');
+            }
+            const existing = state.students.find(s => s.email.toLowerCase() === emailInput);
             if (existing) throw new Error('Email already registered.');
+            const studentNumInput = (data.studentNumber || '').trim().toUpperCase();
+            const existingReg = state.students.find(s => (s.studentNumber || '').trim().toUpperCase() === studentNumInput);
+            if (existingReg) throw new Error('Student Registration Number / ID (' + studentNumInput + ') is already registered.');
             const newId = state.students.length + 1;
             const stu = {
                 studentId: newId,
                 studentNumber: data.studentNumber,
                 fullName: data.fullName,
-                email: data.email.toLowerCase(),
+                email: emailInput,
                 password: data.password || '',
                 department: data.department,
                 yearOfStudy: parseInt(data.yearOfStudy) || 1,
