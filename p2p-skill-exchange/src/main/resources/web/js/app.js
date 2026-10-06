@@ -300,6 +300,11 @@ const app = {
         const yearOfStudy = document.getElementById('regYear').value;
         const bio = document.getElementById('regBio').value.trim();
 
+        if (!password || password.length < 6) {
+            this.showToast('Password must be at least 6 characters long.', 'error');
+            return;
+        }
+
         if (password !== confirm) {
             this.showToast('Passwords do not match!', 'error');
             return;
@@ -1602,6 +1607,9 @@ const FirestoreBackend = {
             if (!emailInput.endsWith('@klu.ac.in')) {
                 throw new Error('Must be a valid student ID');
             }
+            if (!data.password || data.password.length < 6) {
+                throw new Error('Password must be at least 6 characters long.');
+            }
             const existingSnap = await this.db.collection('students')
                 .where('email', '==', emailInput)
                 .limit(1)
@@ -2177,6 +2185,9 @@ const MockBackend = {
             const emailInput = (data.email || '').trim().toLowerCase();
             if (!emailInput.endsWith('@klu.ac.in')) {
                 throw new Error('Must be a valid student ID');
+            }
+            if (!data.password || data.password.length < 6) {
+                throw new Error('Password must be at least 6 characters long.');
             }
             const existing = state.students.find(s => s.email.toLowerCase() === emailInput);
             if (existing) throw new Error('Email already registered.');
