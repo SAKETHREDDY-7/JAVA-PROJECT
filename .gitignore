@@ -27,6 +27,7 @@ firebase-debug.*.log*
 # ── Logs & Runtime ───────────────────────────────────
 logs
 *.log
+*.trace.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
