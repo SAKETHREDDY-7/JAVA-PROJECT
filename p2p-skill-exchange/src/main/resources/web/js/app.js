@@ -371,7 +371,7 @@ const app = {
             document.getElementById('statWanted').textContent = stats.wantedCount;
             document.getElementById('statMatches').textContent = stats.activeMatches;
             document.getElementById('statRequests').textContent = stats.pendingRequests;
-            document.getElementById('statRating').textContent = stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} ⭐` : 'New';
+            document.getElementById('statRating').textContent = stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} / 5.0` : 'New';
 
             const badge = document.getElementById('navReqBadge');
             if (stats.pendingRequests > 0) {
@@ -382,8 +382,9 @@ const app = {
             }
 
             // Load top recommendations
-            const matches = await this.api(`/api/peers?studentId=${this.currentUser.studentId}`);
             const topBox = document.getElementById('dashTopMatches');
+            if (topBox) topBox.innerHTML = this.renderSkeletons(3);
+            const matches = await this.api(`/api/peers?studentId=${this.currentUser.studentId}`);
             if (!matches || matches.length === 0) {
                 topBox.innerHTML = '<p class="empty-state">Add your offered and wanted skills to discover compatible study partners!</p>';
                 return;
@@ -395,11 +396,24 @@ const app = {
         }
     },
 
+    // ── Skeleton Loader Helper ────────────────────────────────────
+    renderSkeletons(count = 3) {
+        return Array(count).fill(0).map(() => `
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line title"></div>
+                <div class="skeleton skeleton-line w-40 sm"></div>
+                <div class="skeleton skeleton-line w-80" style="margin-top:8px"></div>
+                <div class="skeleton skeleton-line w-60"></div>
+                <div class="skeleton skeleton-line sm w-40" style="margin-top:10px; height:28px; border-radius:6px;"></div>
+            </div>
+        `).join('');
+    },
+
     // ── Find Peers ────────────────────────────────────────────────
     async loadPeers() {
         if (!this.currentUser) return;
         const box = document.getElementById('peersList');
-        box.innerHTML = '<p class="empty-state">Calculating compatibility via MatchingAlgorithm...</p>';
+        box.innerHTML = this.renderSkeletons(3);
 
         try {
             this.peersCache = await this.api(`/api/peers?studentId=${this.currentUser.studentId}`);
@@ -424,7 +438,6 @@ const app = {
             const wantMatch = m.wantsFromMe.some(s => s.skillName.toLowerCase().includes(query));
             return nameMatch || deptMatch || teachMatch || wantMatch;
         });
-
         this.renderPeers(filtered);
     },
 
@@ -443,11 +456,11 @@ const app = {
         const badgeClass = score >= 70 ? 'badge-high' : score >= 40 ? 'badge-medium' : 'badge-low';
 
         const canTeachTags = m.canTeachMe.length > 0
-            ? m.canTeachMe.map(s => `<span class="skill-tag">🔹 ${s.skillName}</span>`).join('')
+            ? m.canTeachMe.map(s => `<span class="skill-tag"><span class="skill-tag-dot teach"></span>${s.skillName}</span>`).join('')
             : '<span class="text-muted" style="font-size:0.8rem">No overlap yet</span>';
 
         const wantsTags = m.wantsFromMe.length > 0
-            ? m.wantsFromMe.map(s => `<span class="skill-tag skill-tag-wanted">🔸 ${s.skillName}</span>`).join('')
+            ? m.wantsFromMe.map(s => `<span class="skill-tag skill-tag-wanted"><span class="skill-tag-dot want"></span>${s.skillName}</span>`).join('')
             : '<span class="text-muted" style="font-size:0.8rem">No overlap yet</span>';
 
         return `
@@ -506,17 +519,17 @@ const app = {
             badge.textContent = `${score}% Mutual Compatibility`;
             badge.className = `badge ${score >= 70 ? 'badge-high' : score >= 40 ? 'badge-medium' : 'badge-low'} mt-2`;
 
-            document.getElementById('peerDetailRating').textContent = `${data.avgRating} ⭐ (${data.reviews.length} reviews)`;
+            document.getElementById('peerDetailRating').textContent = `${data.avgRating} / 5.0 (${data.reviews.length} reviews)`;
             document.getElementById('peerDetailBio').textContent = p.bio || 'No bio provided.';
 
             // Offered skills
             document.getElementById('peerDetailOffered').innerHTML = data.offeredSkills.map(s =>
-                `<span class="skill-tag">🔹 ${s.skillName}</span>`
+                `<span class="skill-tag"><span class="skill-tag-dot teach"></span>${s.skillName}</span>`
             ).join('') || '<span class="empty-state">None added</span>';
 
             // Wanted skills
             document.getElementById('peerDetailWanted').innerHTML = data.wantedSkills.map(s =>
-                `<span class="skill-tag skill-tag-wanted">🔸 ${s.skillName}</span>`
+                `<span class="skill-tag skill-tag-wanted"><span class="skill-tag-dot want"></span>${s.skillName}</span>`
             ).join('') || '<span class="empty-state">None added</span>';
 
             // Check active match / request status
@@ -551,7 +564,7 @@ const app = {
                         chipEl.className = 'proposal-banner-chip chip-matched';
                         chipEl.style.background = '';
                         chipEl.style.color = '';
-                        chipEl.textContent = '🤝 Active Study Partnership';
+                        chipEl.textContent = 'Active Study Partnership';
                     }
                     if (titleEl) {
                         titleEl.textContent = `Connected with ${p.fullName}`;
@@ -561,9 +574,9 @@ const app = {
                     }
                     if (actionsEl) {
                         actionsEl.innerHTML = `
-                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">💬 Open Chat</button>
-                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">⭐ Leave Feedback</button>
-                            <button class="btn btn-outline-danger" onclick="app.openCompleteExchangeModal(${activeMatchId || 0}, '${this.escapeForJs(p.fullName)}')">✓ End Exchange</button>
+                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">Open Chat</button>
+                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">Leave Feedback</button>
+                            <button class="btn btn-outline-danger" onclick="app.openCompleteExchangeModal(${activeMatchId || 0}, '${this.escapeForJs(p.fullName)}')">End Exchange</button>
                         `;
                     }
                 }
@@ -579,7 +592,7 @@ const app = {
                         chipEl.className = 'proposal-banner-chip';
                         chipEl.style.background = '#e2e8f0';
                         chipEl.style.color = '#334155';
-                        chipEl.textContent = '✓ Skill Exchange Completed';
+                        chipEl.textContent = 'Skill Exchange Completed';
                     }
                     if (titleEl) {
                         titleEl.textContent = `Completed Collaboration with ${p.fullName}`;
@@ -589,8 +602,8 @@ const app = {
                     }
                     if (actionsEl) {
                         actionsEl.innerHTML = `
-                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">💬 Chat History</button>
-                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">⭐ Leave Feedback</button>
+                            <button class="btn btn-primary" onclick="app.openChatWithPeer(${peerId}, '${this.escapeForJs(p.fullName)}', '${this.escapeForJs(p.department)}')">Chat History</button>
+                            <button class="btn btn-accent" onclick="app.openFeedbackForPeer(${peerId}, ${activeMatchId || 0})">Leave Feedback</button>
                         `;
                     }
                 }
@@ -606,7 +619,7 @@ const app = {
                         chipEl.className = 'proposal-banner-chip';
                         chipEl.style.background = '';
                         chipEl.style.color = '';
-                        chipEl.textContent = '📬 Pending Exchange Proposal';
+                        chipEl.textContent = 'Pending Exchange Proposal';
                     }
                     if (titleEl) {
                         titleEl.textContent = `Exchange Proposal from ${p.fullName}`;
@@ -799,7 +812,7 @@ const app = {
             } else {
                 offBox.innerHTML = data.offered.map(s => `
                     <div class="skill-pill">
-                        <span>🔹 ${s.skillName} <small style="color:#64748b">(${s.categoryName})</small></span>
+                        <span><span class="skill-tag-dot teach"></span>${s.skillName} <small style="color:#64748b">(${s.categoryName})</small></span>
                         <button onclick="app.removeSkill('OFFERED', ${s.skillId})" title="Remove skill">✕</button>
                     </div>
                 `).join('');
@@ -813,7 +826,7 @@ const app = {
             } else {
                 wanBox.innerHTML = data.wanted.map(s => `
                     <div class="skill-pill">
-                        <span>🔸 ${s.skillName} <small style="color:#64748b">(${s.categoryName})</small></span>
+                        <span><span class="skill-tag-dot want"></span>${s.skillName} <small style="color:#64748b">(${s.categoryName})</small></span>
                         <button onclick="app.removeSkill('WANTED', ${s.skillId})" title="Remove skill">✕</button>
                     </div>
                 `).join('');
@@ -901,13 +914,13 @@ const app = {
                             ${r.message ? `<div class="request-card-msg">"${this.escapeHtml(r.message)}"</div>` : ''}
                         </div>
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}', '${r.status}')">👁 View Profile</button>
+                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfileFromRequest(${r.senderId}, ${r.requestId}, '${this.escapeForJs(r.message || '')}', '${r.status}')">View Profile</button>
                             ${r.status === 'PENDING' ? `
                                 <button class="btn btn-primary btn-sm" onclick="app.respondRequest(${r.requestId}, 'ACCEPT')">✓ Accept Match</button>
                                 <button class="btn btn-danger btn-sm" onclick="app.respondRequest(${r.requestId}, 'REJECT')">✕ Decline</button>
                             ` : r.status === 'ACCEPTED' ? `
                                 <span class="badge badge-high">ACCEPTED</span>
-                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.senderId}, '${this.escapeForJs(r.senderName)}', '${this.escapeForJs(r.senderDept)}')">💬 Chat</button>
+                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.senderId}, '${this.escapeForJs(r.senderName)}', '${this.escapeForJs(r.senderDept)}')">Chat</button>
                             ` : `<span class="badge badge-low">${r.status}</span>`}
                         </div>
                     </div>
@@ -927,10 +940,10 @@ const app = {
                             ${r.message ? `<div class="request-card-msg">"${r.message}"</div>` : ''}
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${r.receiverId})">👁 View Profile</button>
+                            <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${r.receiverId})">View Profile</button>
                             <span class="badge ${r.status === 'ACCEPTED' ? 'badge-high' : r.status === 'PENDING' ? 'badge-medium' : 'badge-low'}">${r.status}</span>
                             ${r.status === 'ACCEPTED' ? `
-                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.receiverId}, '${this.escapeForJs(r.receiverName)}', '${this.escapeForJs(r.receiverDept)}')">💬 Chat</button>
+                                <button class="btn btn-primary btn-sm" onclick="app.openChatWithPeer(${r.receiverId}, '${this.escapeForJs(r.receiverName)}', '${this.escapeForJs(r.receiverDept)}')">Chat</button>
                             ` : ''}
                         </div>
                     </div>
@@ -1049,7 +1062,7 @@ const app = {
             <div class="match-card ${isActive ? '' : 'match-card-completed'}">
                 <div>
                     <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <h3>${isActive ? '🤝 Active Partner:' : '✓ Completed Partner:'} <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
+                        <h3>${isActive ? 'Active Partner:' : 'Completed Partner:'} <a href="javascript:void(0)" class="proposal-sender-link" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">${this.escapeHtml(peerName)}</a></h3>
                         ${isActive ? '' : '<span class="badge badge-low" style="background:#e2e8f0; color:#475569; font-weight:600;">✓ Completed</span>'}
                     </div>
                     <p class="text-muted" style="font-size:0.88rem">${this.escapeHtml(peerDept)}${peerEmail ? ` • Student Email: ${this.escapeHtml(peerEmail)}` : ''}</p>
@@ -1061,9 +1074,9 @@ const app = {
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
                     <span class="badge ${score >= 70 ? 'badge-high' : score >= 40 ? 'badge-medium' : 'badge-low'}">${score}% Match</span>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
-                        <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">👁 Profile</button>
+                        <button class="btn btn-secondary btn-sm" onclick="app.viewPeerProfile(${peerId}, { fromMatches: true })">Profile</button>
                         <button class="btn btn-primary btn-sm" onclick="app.openChatModal(${m.matchId}, '${this.escapeForJs(peerName)}', '${this.escapeForJs(peerDept)}')">
-                            💬 ${isActive ? 'Chat' : 'Chat History'}
+                            ${isActive ? 'Chat' : 'Chat History'}
                         </button>
                         ${isActive ? `
                             <button class="btn btn-outline-danger btn-sm" onclick="app.openCompleteExchangeModal(${m.matchId}, '${this.escapeForJs(peerName)}')">
@@ -1073,7 +1086,7 @@ const app = {
                         ${item.reviewed ? `
                             <span class="badge badge-low">✓ Reviewed</span>
                         ` : `
-                            <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">⭐ Leave Feedback</button>
+                            <button class="btn btn-accent btn-sm" onclick="app.openFeedbackModal(${m.matchId})">Leave Feedback</button>
                         `}
                     </div>
                 </div>
@@ -1282,7 +1295,11 @@ const app = {
         if (msgList.length === 0) {
             feedEl.innerHTML = `
                 <div class="chat-empty-state">
-                    <div class="chat-empty-icon">💬</div>
+                    <div class="chat-empty-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
                     <h4>No messages yet</h4>
                     <p class="text-muted">Say hello to coordinate your skill exchange session!</p>
                 </div>
