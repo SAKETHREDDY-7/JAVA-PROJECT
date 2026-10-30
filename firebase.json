@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "p2p-skill-exchange/web",
+    "public": "p2p-skill-exchange/src/main/resources/web",
     "ignore": [
       "firebase.json",
       "**/.*",

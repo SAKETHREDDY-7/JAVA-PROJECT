@@ -133,8 +133,11 @@ A modern, cross-device **Peer-to-Peer Skill Exchange Web Application** developed
 ## 🧪 Automated Testing
 To run the automated smoke and integration test suite:
 ```cmd
-mvn clean test-compile
-java -cp "target/classes;target/test-classes;C:\Users\saket\.m2\repository\com\mysql\mysql-connector-j\8.3.0\mysql-connector-j-8.3.0.jar;C:\Users\saket\.m2\repository\com\h2database\h2\2.2.224\h2-2.2.224.jar" com.p2pskill.test.SmokeIntegrationTest
+mvn test
 ```
-*(All 25 test cases verify database connectivity, password hashing, input validation, session management, and set intersection algorithms).*
+Or run the standalone test suite runner directly:
+```cmd
+mvn test-compile exec:java "-Dexec.mainClass=com.p2pskill.test.SmokeIntegrationTest" "-Dexec.classpathScope=test"
+```
+*(All 26 test cases verify database connectivity, password hashing, input validation, session management, and set intersection algorithms).*
 

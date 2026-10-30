@@ -11,6 +11,8 @@ import com.p2pskill.util.InputValidator;
 import com.p2pskill.util.PasswordHasher;
 import com.p2pskill.util.SessionManager;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,13 +39,14 @@ public class SmokeIntegrationTest {
         System.out.println("   PEER-TO-PEER SKILL EXCHANGE SYSTEM — INTEGRATION SUITE      ");
         System.out.println("===============================================================");
 
-        testDatabaseConnectivity();
-        testPasswordHashing();
-        testInputValidation();
-        testSessionManager();
-        testMutualSkillAlgorithm();
-        testPeerSortingAndRanking();
-        testStudentDAOAndCatalogue();
+        SmokeIntegrationTest runner = new SmokeIntegrationTest();
+        runner.testDatabaseConnectivity();
+        runner.testPasswordHashing();
+        runner.testInputValidation();
+        runner.testSessionManager();
+        runner.testMutualSkillAlgorithm();
+        runner.testPeerSortingAndRanking();
+        runner.testStudentDAOAndCatalogue();
 
         System.out.println("\n===============================================================");
         System.out.printf("   TEST SUMMARY: %d PASSED, %d FAILED\n", testsPassed, testsFailed);
@@ -61,10 +64,12 @@ public class SmokeIntegrationTest {
         } else {
             System.err.printf("  [FAIL] %-45s - %s\n", testName, details);
             testsFailed++;
+            org.junit.jupiter.api.Assertions.fail(testName + " - " + details);
         }
     }
 
-    private static void testDatabaseConnectivity() {
+    @Test
+    public void testDatabaseConnectivity() {
         System.out.println("\n--- 1. Database & Config Test ---");
         try {
             boolean isConfigured = DatabaseConfig.DB_URL != null && !DatabaseConfig.DB_URL.isBlank();
@@ -75,7 +80,8 @@ public class SmokeIntegrationTest {
         }
     }
 
-    private static void testPasswordHashing() {
+    @Test
+    public void testPasswordHashing() {
         System.out.println("\n--- 2. Cryptographic Security Test (SHA-256) ---");
         String plain = "Password@123";
         String hash = PasswordHasher.hash(plain);
@@ -90,7 +96,8 @@ public class SmokeIntegrationTest {
                 "Incorrect password properly rejected");
     }
 
-    private static void testInputValidation() {
+    @Test
+    public void testInputValidation() {
         System.out.println("\n--- 3. Input Validation Test ---");
         assertTrue("Valid KLU Email", InputValidator.validateEmail("saketh@klu.ac.in") == null, "Valid KLU email accepted");
         assertTrue("Reject Gmail Email", InputValidator.validateEmail("student@gmail.com") != null, "Non-KLU email (@gmail.com) rejected");
@@ -101,7 +108,8 @@ public class SmokeIntegrationTest {
         assertTrue("Invalid Rating High", InputValidator.validateRating(6) != null, "Rating 6 rejected");
     }
 
-    private static void testSessionManager() {
+    @Test
+    public void testSessionManager() {
         System.out.println("\n--- 4. Session State Management Test ---");
         Student testStudent = new Student();
         testStudent.setStudentId(99);
@@ -115,7 +123,8 @@ public class SmokeIntegrationTest {
         assertTrue("Session Cleared", !SessionManager.getInstance().isLoggedIn(), "Session cleared on logout");
     }
 
-    private static void testMutualSkillAlgorithm() {
+    @Test
+    public void testMutualSkillAlgorithm() {
         System.out.println("\n--- 5. DSA Set Overlap Algorithm Test ---");
         List<Integer> aOffered = List.of(1, 2, 3); // e.g. Java, Python, C
         List<Integer> aWanted  = List.of(10, 19);  // e.g. React, SQL
@@ -135,7 +144,8 @@ public class SmokeIntegrationTest {
         assertTrue("Zero Compatibility", noMatch == 0.0, "Disjoint skills correctly yield 0% match");
     }
 
-    private static void testPeerSortingAndRanking() {
+    @Test
+    public void testPeerSortingAndRanking() {
         System.out.println("\n--- 6. DSA Peer Sorting & Ranking (Heap & Sort) Test ---");
         Student s1 = new Student("S1", "Alice", "alice@klu.ac.in", "pass", "CSE", 2, "");
         Student s2 = new Student("S2", "Bob", "bob@klu.ac.in", "pass", "ECE", 2, "");
@@ -172,7 +182,8 @@ public class SmokeIntegrationTest {
                 "Top-2 extracted via PriorityQueue");
     }
 
-    private static void testStudentDAOAndCatalogue() {
+    @Test
+    public void testStudentDAOAndCatalogue() {
         System.out.println("\n--- 7. Data Model, OOP & Database Test ---");
         SkillCategory cat = new SkillCategory(1, "Programming Languages", "Languages");
         Skill skill = new Skill(1, "Java", cat);

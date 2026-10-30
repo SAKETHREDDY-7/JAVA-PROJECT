@@ -1,0 +1,51 @@
+-- Auto-synced from Firebase Firestore
+DELETE FROM feedback;
+DELETE FROM `match`;
+DELETE FROM skill_exchange_request;
+DELETE FROM student_offered_skill;
+DELETE FROM student_wanted_skill;
+DELETE FROM student;
+
+INSERT INTO student (student_id, student_number, full_name, email, password_hash, department, year_of_study, bio) VALUES (11, '9925051013', 'B.Saketh Reddy', '9925051013@klu.ac.in', '78e7c335c1551691ee36d1a0d2a0f4810b7d5951b59b55258ac7be2165f10e8c', 'AI-DS', 2, '');
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'MySQL';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'HTML & CSS';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'JavaScript';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'SQL';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'R Programming';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'Java';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'Deep Learning';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'AWS';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 11, skill_id FROM skill WHERE skill_name = 'C Programming';
+INSERT INTO student (student_id, student_number, full_name, email, password_hash, department, year_of_study, bio) VALUES (12, '9925051079', 'Likitheswar', '9925051079@klu.ac.in', '3823dafcd262df7de612e7d73ce5509cb20ec772b1d5c3705d08f5a5d2a93f33', 'AI-DS', 2, '');
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 12, skill_id FROM skill WHERE skill_name = 'C Programming';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 12, skill_id FROM skill WHERE skill_name = 'Java';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 12, skill_id FROM skill WHERE skill_name = 'HTML & CSS';
+INSERT INTO student (student_id, student_number, full_name, email, password_hash, department, year_of_study, bio) VALUES (13, '9925051076', 'sai teja', '9925051076@klu.ac.in', 'f32430b58f5f67503aafe65d2158ac749caae6ecef4e02c17cdecfbc9a22d258', 'AI-DS', 2, '');
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'C Programming';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'Python';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'Java';
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'Git & GitHub';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'Java';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 13, skill_id FROM skill WHERE skill_name = 'HTML & CSS';
+INSERT INTO student (student_id, student_number, full_name, email, password_hash, department, year_of_study, bio) VALUES (14, '99250040958', 'Mohammed Arshad', '99250040958@klu.ac.in', 'b2679f882fbda8f4438b0421f383abe0eafc1d01b574f54f2f931378ebf4f8cc', 'CSE(DS)', 2, '');
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 14, skill_id FROM skill WHERE skill_name = 'Python';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 14, skill_id FROM skill WHERE skill_name = 'SQL';
+INSERT INTO student (student_id, student_number, full_name, email, password_hash, department, year_of_study, bio) VALUES (15, '9925051028', 'Kuruba Yugandar', '9925051028@klu.ac.in', 'c6b731c7324f2521cd0705f5c5c46557a8445204e683b63da812caa15f9dbc57', 'CSE(AIDS)', 1, '');
+INSERT INTO student_offered_skill (student_id, skill_id) SELECT 15, skill_id FROM skill WHERE skill_name = 'JavaScript';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 15, skill_id FROM skill WHERE skill_name = 'Java';
+INSERT INTO student_wanted_skill (student_id, skill_id) SELECT 15, skill_id FROM skill WHERE skill_name = 'C Programming';
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (1, 12, 11, '', 'ACCEPTED');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (2, 12, 11, 'Hi,I''m Likith.
+I''m intrested in web development.
+I hope we can learn togetger', 'ACCEPTED');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (3, 14, 11, '', 'ACCEPTED');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (4, 11, 14, '', 'ACCEPTED');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (5, 1, 14, '', 'PENDING');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (6, 13, 12, '', 'ACCEPTED');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (7, 11, 13, '', 'PENDING');
+INSERT INTO skill_exchange_request (request_id, sender_id, receiver_id, message, status) VALUES (8, 15, 12, '', 'ACCEPTED');
+INSERT INTO `match` (match_id, request_id, student_id_1, student_id_2, match_score, is_active) VALUES (1, 1, 12, 11, 85, 1);
+INSERT INTO `match` (match_id, request_id, student_id_1, student_id_2, match_score, is_active) VALUES (2, 2, 14, 11, 85, 1);
+INSERT INTO `match` (match_id, request_id, student_id_1, student_id_2, match_score, is_active) VALUES (3, 3, 11, 14, 85, 1);
+INSERT INTO `match` (match_id, request_id, student_id_1, student_id_2, match_score, is_active) VALUES (4, 4, 13, 12, 85, 1);
+INSERT INTO `match` (match_id, request_id, student_id_1, student_id_2, match_score, is_active) VALUES (5, 5, 15, 12, 85, 1);
