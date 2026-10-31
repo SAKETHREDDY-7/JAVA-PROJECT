@@ -96,10 +96,10 @@ A modern, cross-device **Peer-to-Peer Skill Exchange Web Application** developed
 
 | Team Member | Domain | Key Responsibilities | Key Classes / Files |
 |:---|:---|:---|:---|
-| **Member 1** | **Web Frontend & HTTP Server** | Web UI (HTML5/CSS/JS), HttpServer endpoints, static file serving, JSON serializer | `web/*`, `web/WebServer.java`, `StaticFileHandler.java`, `ApiHandler.java`, `JsonUtil.java` |
-| **Member 2** | **Core Java (OOP & Services)** | Application logic, session handling, authentication, input validation | `service/*`, `model/*`, `util/PasswordHasher.java`, `util/InputValidator.java` |
-| **Member 3** | **Data Structures & Algorithms** | Set intersection matching, peer ranking (heap), sorting algorithms | `algorithm/MatchingAlgorithm.java` |
-| **Member 4** | **Database & JDBC** | Schema design, sample data, JDBC connection manager, PreparedStatement DAOs | `sql/schema.sql`, `sql/sample_data.sql`, `config/*`, `dao/*` |
+| **B.Saketh Reddy** | **Web Server & System Integration** | Web UI (HTML5/CSS/JS), HttpServer endpoints, static file serving, JSON serializer | `web/*`, `web/WebServer.java`, `StaticFileHandler.java`, `ApiHandler.java`, `JsonUtil.java` |
+| **G.Likhiteswar** | **Core Java (OOP & Services)** | Application logic, session handling, authentication, input validation | `service/*`, `model/*`, `util/PasswordHasher.java`, `util/InputValidator.java` |
+| **M.Ravi Teja** | **Data Structures & Algorithms** | Set intersection matching, peer ranking (heap), sorting algorithms | `algorithm/MatchingAlgorithm.java` |
+| **K.Yugandhar** | **Database & JDBC** | Schema design, sample data, JDBC connection manager, PreparedStatement DAOs | `sql/schema.sql`, `sql/sample_data.sql`, `config/*`, `dao/*` |
 
 ---
 
