@@ -53,3 +53,7 @@ lib-cov
 bower_components
 .lock-wscript
 build/Release
+
+# ── Sensitive Configs & Keys ───────────────────────
+**/config.js
+config.js

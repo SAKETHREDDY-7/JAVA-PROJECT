@@ -1551,16 +1551,14 @@ const FirestoreBackend = {
                 throw new Error('Firebase SDK not loaded.');
             }
 
-            const firebaseConfig = {
-                apiKey: "AIzaSyCchbDm0Gghty4lIeYXWhKZs2LMwXCvcoU",
-                authDomain: "peer-to-peer-interaction-7.firebaseapp.com",
-                projectId: "peer-to-peer-interaction-7",
-                storageBucket: "peer-to-peer-interaction-7.firebasestorage.app",
-                messagingSenderId: "780710040418"
-            };
+            // Load configuration from config.js (Git ignored for security)
+            const config = window.firebaseConfig;
+            if (!config || !config.apiKey || config.apiKey === 'YOUR_FIREBASE_API_KEY') {
+                throw new Error('Firebase configuration not provided in config.js (Falling back to local backend/storage).');
+            }
 
             if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
+                firebase.initializeApp(config);
             }
 
             this.db = firebase.firestore();
